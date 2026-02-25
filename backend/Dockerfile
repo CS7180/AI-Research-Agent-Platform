@@ -7,9 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmupdf-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install uv safely
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install Python dependencies using uv instead of pip
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN uv pip install --system -e ".[dev]"
 
 # Copy application source
 COPY app/ ./app/
