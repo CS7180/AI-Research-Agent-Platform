@@ -16,30 +16,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --all-extras
 
       - name: Lint with Ruff
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Format syntax check with Black
-        run: black --check .
+        run: uv run black --check .
 
       - name: Security Scan (pip-audit)
-        run: pip-audit || echo "Audit findings printed."
+        run: uv pip install pip-audit && uv run pip-audit || echo "Audit findings printed."
 
       - name: Run Pytest
         env:
           SUPABASE_URL: "https://mock.supabase.co"
           SUPABASE_ANON_KEY: "mock_anon"
           SUPABASE_SERVICE_KEY: "mock_service"
-        run: pytest
+        run: uv run pytest
 
   frontend-lint:
     name: Frontend Lint
