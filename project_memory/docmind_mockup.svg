@@ -1,0 +1,381 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <filter id="cardShadow" x="-4%" y="-2%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#000000" flood-opacity="0.06"/>
+      <feDropShadow dx="0" dy="0.5" stdDeviation="1" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0071E3"/>
+      <stop offset="100%" stop-color="#5E5CE6"/>
+    </linearGradient>
+    <linearGradient id="aiAvatarGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0071E3"/>
+      <stop offset="100%" stop-color="#5E5CE6"/>
+    </linearGradient>
+    <linearGradient id="humanAvatarGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8E8ED"/>
+      <stop offset="100%" stop-color="#D1D1D6"/>
+    </linearGradient>
+    <linearGradient id="navBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D1D1F" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#1D1D1F" stop-opacity="0.78"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══ BACKGROUND ═══ -->
+  <g id="Background">
+    <rect width="1440" height="900" fill="#F5F5F7"/>
+  </g>
+
+  <!-- ═══ TOP NAVBAR ═══ -->
+  <g id="Navbar">
+    <rect x="0" y="0" width="1440" height="44" fill="url(#navBg)" rx="0"/>
+    
+    <!-- Logo -->
+    <g id="Nav-Logo">
+      <rect x="24" y="7" width="30" height="30" rx="7" fill="url(#logoGrad)"/>
+      <text x="34" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle">D</text>
+    </g>
+    <text x="64" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="15" font-weight="600" fill="#F5F5F7" letter-spacing="-0.3">DocMind</text>
+
+    <!-- Nav Links -->
+    <g id="Nav-Links">
+      <text x="160" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="500" fill="#F5F5F7">Chat</text>
+      <text x="210" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="400" fill="rgba(245,245,247,0.7)">Documents</text>
+      <text x="300" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="400" fill="rgba(245,245,247,0.7)">Evaluation</text>
+      <text x="390" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="400" fill="rgba(245,245,247,0.7)">Settings</text>
+    </g>
+
+    <!-- Right pills -->
+    <g id="Nav-Status">
+      <rect x="1130" y="12" width="100" height="22" rx="11" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <circle cx="1144" cy="23" r="3" fill="#2DC653"/>
+      <text x="1155" y="27" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" font-weight="500" fill="rgba(245,245,247,0.8)">8 docs</text>
+    </g>
+
+    <g id="Nav-Model">
+      <rect x="1242" y="12" width="120" height="22" rx="11" fill="rgba(0,113,227,0.15)"/>
+      <text x="1260" y="27" font-family="Menlo, monospace" font-size="11" font-weight="500" fill="#64B5F6">gemini-2.5-flash</text>
+    </g>
+
+    <g id="Nav-Avatar">
+      <circle cx="1400" cy="22" r="13" fill="rgba(255,255,255,0.15)"/>
+      <text x="1400" y="26" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10" font-weight="600" fill="rgba(245,245,247,0.8)" text-anchor="middle">JD</text>
+    </g>
+  </g>
+
+  <!-- ═══ LEFT CARD — Chats ═══ -->
+  <g id="Card-Chats" filter="url(#cardShadow)">
+    <rect x="28" y="72" width="260" height="800" rx="18" fill="#FFFFFF"/>
+
+    <!-- Header -->
+    <g id="Chats-Header">
+      <text x="48" y="108" font-family="Poppins, Helvetica Neue, sans-serif" font-size="20" font-weight="600" fill="#1D1D1F" letter-spacing="-0.4">Chats</text>
+      <text x="48" y="126" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12.5" fill="#86868B">Your conversations</text>
+    </g>
+
+    <!-- New Chat Button -->
+    <g id="Chats-NewBtn">
+      <rect x="40" y="140" width="236" height="36" rx="10" fill="#F5F5F7"/>
+      <text x="138" y="163" font-family="Poppins, Helvetica Neue, sans-serif" font-size="16" font-weight="300" fill="#AEAEB2">+</text>
+      <text x="152" y="162" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#424245">New Chat</text>
+    </g>
+
+    <!-- Active session -->
+    <g id="Chats-Session-Active">
+      <rect x="40" y="190" width="236" height="52" rx="10" fill="#0071E3"/>
+      <circle cx="64" cy="216" r="14" fill="rgba(255,255,255,0.2)"/>
+      <text x="64" y="220" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" text-anchor="middle" fill="rgba(255,255,255,0.9)">&#x1F4AC;</text>
+      <text x="86" y="210" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#FFFFFF">What is 2PC?</text>
+      <text x="86" y="226" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="rgba(255,255,255,0.65)">Just now</text>
+    </g>
+
+    <!-- Session 2 -->
+    <g id="Chats-Session-2">
+      <circle cx="64" cy="268" r="14" fill="#F5F5F7"/>
+      <text x="64" y="272" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" text-anchor="middle" fill="#86868B">&#x1F4AC;</text>
+      <text x="86" y="262" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">Paxos vs Raft comparison</text>
+      <text x="86" y="278" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">Yesterday</text>
+    </g>
+
+    <!-- Session 3 -->
+    <g id="Chats-Session-3">
+      <circle cx="64" cy="320" r="14" fill="#F5F5F7"/>
+      <text x="64" y="324" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" text-anchor="middle" fill="#86868B">&#x1F4AC;</text>
+      <text x="86" y="314" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">RAG chunking strategies</text>
+      <text x="86" y="330" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">Feb 22</text>
+    </g>
+
+    <!-- Session 4 -->
+    <g id="Chats-Session-4">
+      <circle cx="64" cy="372" r="14" fill="#F5F5F7"/>
+      <text x="64" y="376" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" text-anchor="middle" fill="#86868B">&#x1F4AC;</text>
+      <text x="86" y="366" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">LangGraph agent design</text>
+      <text x="86" y="382" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">Feb 20</text>
+    </g>
+
+    <!-- Session 5 -->
+    <g id="Chats-Session-5">
+      <circle cx="64" cy="424" r="14" fill="#F5F5F7"/>
+      <text x="64" y="428" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" text-anchor="middle" fill="#86868B">&#x1F4AC;</text>
+      <text x="86" y="418" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">BM25 hybrid search</text>
+      <text x="86" y="434" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">Feb 18</text>
+    </g>
+  </g>
+
+  <!-- ═══ CENTER CARD — Chat ═══ -->
+  <g id="Card-Chat" filter="url(#cardShadow)">
+    <rect x="316" y="72" width="730" height="800" rx="18" fill="#FFFFFF"/>
+
+    <!-- Chat Header -->
+    <g id="Chat-Header">
+      <text x="340" y="108" font-family="Poppins, Helvetica Neue, sans-serif" font-size="20" font-weight="600" fill="#1D1D1F" letter-spacing="-0.4">What is 2PC?</text>
+      <text x="340" y="126" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12.5" fill="#86868B">Based on your distributed systems notes</text>
+      <line x1="316" y1="140" x2="1046" y2="140" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    </g>
+
+    <!-- User message bubble -->
+    <g id="Chat-User-Message">
+      <rect x="700" y="168" width="286" height="40" rx="20" fill="#0071E3"/>
+      <text x="720" y="193" font-family="Poppins, Helvetica Neue, sans-serif" font-size="15" fill="#FFFFFF">What is Two-Phase Commit?</text>
+      <circle cx="1004" cy="182" r="14" fill="url(#humanAvatarGrad)"/>
+      <text x="1004" y="187" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10" font-weight="600" fill="#86868B" text-anchor="middle">JD</text>
+    </g>
+
+    <!-- AI Avatar -->
+    <g id="Chat-AI-Avatar">
+      <circle cx="350" cy="240" r="14" fill="url(#aiAvatarGrad)"/>
+      <text x="350" y="245" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">D</text>
+    </g>
+
+    <!-- AI Response Text -->
+    <g id="Chat-AI-Response">
+      <text x="374" y="240" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245" letter-spacing="-0.2">
+        <tspan x="374" dy="0">Two-Phase Commit (2PC) is a distributed protocol that</tspan>
+        <tspan x="374" dy="22">ensures all nodes either </tspan>
+        <tspan font-weight="600" fill="#1D1D1F">commit</tspan>
+        <tspan> or </tspan>
+        <tspan font-weight="600" fill="#1D1D1F">abort</tspan>
+        <tspan> a transaction</tspan>
+        <tspan x="374" dy="22">together. From your </tspan>
+        <tspan fill="#0071E3" font-weight="500">Lecture 11</tspan>
+        <tspan> slides:</tspan>
+      </text>
+
+      <!-- Phase 1 -->
+      <text x="374" y="322" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245" letter-spacing="-0.2">
+        <tspan font-weight="600" fill="#1D1D1F">Phase 1</tspan>
+        <tspan> — the coordinator sends </tspan>
+      </text>
+      <rect x="680" y="308" width="72" height="22" rx="4" fill="#F5F5F7" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+      <text x="692" y="324" font-family="Menlo, monospace" font-size="12" fill="#424245">PREPARE</text>
+      <text x="374" y="344" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245">and each participant votes YES or NO.</text>
+
+      <!-- Phase 2 -->
+      <text x="374" y="378" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245" letter-spacing="-0.2">
+        <tspan font-weight="600" fill="#1D1D1F">Phase 2</tspan>
+        <tspan> — if all voted YES, broadcast </tspan>
+      </text>
+      <rect x="700" y="364" width="62" height="22" rx="4" fill="#F5F5F7" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+      <text x="710" y="380" font-family="Menlo, monospace" font-size="12" fill="#424245">COMMIT</text>
+      <text x="770" y="378" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245"> ;</text>
+      <text x="374" y="400" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245">
+        <tspan>otherwise </tspan>
+      </text>
+      <rect x="454" y="386" width="52" height="22" rx="4" fill="#F5F5F7" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+      <text x="464" y="402" font-family="Menlo, monospace" font-size="12" fill="#424245">ABORT</text>
+      <text x="512" y="400" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245"> .</text>
+
+      <!-- Trade-off -->
+      <text x="374" y="436" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14.5" fill="#424245" letter-spacing="-0.2">
+        <tspan>The key trade-off: 2PC guarantees atomicity but</tspan>
+        <tspan x="374" dy="22">can </tspan>
+        <tspan font-style="italic">block</tspan>
+        <tspan> if the coordinator fails mid-protocol.</tspan>
+      </text>
+    </g>
+
+    <!-- Sources Card -->
+    <g id="Chat-Sources">
+      <rect x="374" y="484" width="500" height="92" rx="12" fill="#FFFFFF" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+      
+      <!-- Sources header -->
+      <rect x="374" y="484" width="500" height="28" rx="12" fill="#F5F5F7"/>
+      <rect x="374" y="500" width="500" height="12" fill="#F5F5F7"/>
+      <line x1="374" y1="512" x2="874" y2="512" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+      <text x="394" y="504" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" font-weight="600" fill="#AEAEB2" letter-spacing="0.3">SOURCES</text>
+
+      <!-- Source 1 -->
+      <rect x="394" y="520" width="22" height="22" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="400" y="535" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="424" y="536" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#424245">CS6650_Lecture11_2PC.pdf</text>
+      <rect x="800" y="522" width="64" height="18" rx="4" fill="#F5F5F7"/>
+      <text x="807" y="535" font-family="Menlo, monospace" font-size="9.5" fill="#AEAEB2">slides 28-35</text>
+
+      <line x1="394" y1="548" x2="854" y2="548" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+
+      <!-- Source 2 -->
+      <rect x="394" y="554" width="22" height="22" rx="5" fill="rgba(0,113,227,0.07)"/>
+      <text x="401" y="569" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#0071E3">MD</text>
+      <text x="424" y="570" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#424245">distributed_systems_notes.md</text>
+      <rect x="812" y="556" width="52" height="18" rx="4" fill="#F5F5F7"/>
+      <text x="820" y="569" font-family="Menlo, monospace" font-size="9.5" fill="#AEAEB2">chunk 5</text>
+    </g>
+
+    <!-- Retrieval Meta -->
+    <g id="Chat-Meta">
+      <rect x="374" y="590" width="90" height="20" rx="10" fill="rgba(0,113,227,0.07)"/>
+      <text x="384" y="604" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10" font-weight="500" fill="#0071E3">Knowledge Base</text>
+      <text x="472" y="604" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">  2 docs · 1.2s</text>
+    </g>
+
+    <!-- Input Bar -->
+    <g id="Chat-Input">
+      <rect x="340" y="808" width="682" height="42" rx="21" fill="#F5F5F7"/>
+      <text x="370" y="834" font-family="Poppins, Helvetica Neue, sans-serif" font-size="14" fill="#D2D2D7">Ask a follow-up...</text>
+
+      <!-- Attach button -->
+      <text x="936" y="834" font-family="Poppins, Helvetica Neue, sans-serif" font-size="15" fill="#AEAEB2">&#x1F4CE;</text>
+      <!-- Camera button -->
+      <text x="966" y="834" font-family="Poppins, Helvetica Neue, sans-serif" font-size="15" fill="#AEAEB2">&#x1F4F7;</text>
+      <!-- Send button -->
+      <circle cx="1000" cy="829" r="16" fill="#0071E3"/>
+      <text x="1000" y="835" font-family="Poppins, Helvetica Neue, sans-serif" font-size="16" font-weight="600" fill="#FFFFFF" text-anchor="middle">&#x2191;</text>
+    </g>
+
+    <!-- Input footer -->
+    <g id="Chat-Input-Footer">
+      <text x="681" y="862" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#D2D2D7" text-anchor="middle">Gemini 2.5 Flash · 8 documents · 523 chunks</text>
+    </g>
+  </g>
+
+  <!-- ═══ RIGHT CARD — Knowledge Base ═══ -->
+  <g id="Card-KnowledgeBase" filter="url(#cardShadow)">
+    <rect x="1074" y="72" width="340" height="800" rx="18" fill="#FFFFFF"/>
+
+    <!-- KB Header -->
+    <g id="KB-Header">
+      <text x="1094" y="108" font-family="Poppins, Helvetica Neue, sans-serif" font-size="20" font-weight="600" fill="#1D1D1F" letter-spacing="-0.4">Knowledge Base</text>
+      <text x="1094" y="126" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12.5" fill="#86868B">8 files in 3 folders</text>
+    </g>
+
+    <!-- Search -->
+    <g id="KB-Search">
+      <rect x="1086" y="140" width="316" height="34" rx="10" fill="#F5F5F7"/>
+      <text x="1102" y="162" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12.5" fill="#D2D2D7">Search files and folders...</text>
+    </g>
+
+    <!-- Folder 1: Distributed Systems -->
+    <g id="KB-Folder-DistSys">
+      <text x="1094" y="210" font-family="Poppins, Helvetica Neue, sans-serif" font-size="17" fill="#86868B">&#x1F4C2;</text>
+      <text x="1118" y="210" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">Distributed Systems</text>
+      <rect x="1360" y="198" width="22" height="18" rx="9" fill="#F5F5F7"/>
+      <text x="1367" y="211" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">4</text>
+      <text x="1392" y="211" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#D2D2D7">&#x25BE;</text>
+    </g>
+
+    <!-- File 1 -->
+    <g id="KB-File-Lecture11">
+      <rect x="1118" y="224" width="24" height="24" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="1123" y="240" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="1150" y="236" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">CS6650_Lecture11_2PC.pdf</text>
+      <text x="1150" y="250" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">2.4 MB · 42 chunks</text>
+      <rect x="1354" y="232" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="243" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- File 2 -->
+    <g id="KB-File-Lecture12">
+      <rect x="1118" y="264" width="24" height="24" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="1123" y="280" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="1150" y="276" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">CS6650_Lecture12_3PC.pdf</text>
+      <text x="1150" y="290" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">2.1 MB · 38 chunks</text>
+      <rect x="1354" y="272" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="283" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- File 3 -->
+    <g id="KB-File-Raft">
+      <rect x="1118" y="304" width="24" height="24" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="1123" y="320" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="1150" y="316" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">Raft_Consensus.pdf</text>
+      <text x="1150" y="330" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">1.2 MB · 51 chunks</text>
+      <rect x="1354" y="312" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="323" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- File 4 -->
+    <g id="KB-File-Notes-MD">
+      <rect x="1118" y="344" width="24" height="24" rx="5" fill="rgba(0,113,227,0.07)"/>
+      <text x="1124" y="360" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#0071E3">MD</text>
+      <text x="1150" y="356" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">distributed_systems_note...</text>
+      <text x="1150" y="370" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">89 KB · 24 chunks</text>
+      <rect x="1354" y="352" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="363" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- Separator -->
+    <line x1="1094" y1="385" x2="1394" y2="385" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+
+    <!-- Folder 2: AI / ML -->
+    <g id="KB-Folder-AIML">
+      <text x="1094" y="412" font-family="Poppins, Helvetica Neue, sans-serif" font-size="17" fill="#86868B">&#x1F4C2;</text>
+      <text x="1118" y="412" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">AI / Machine Learning</text>
+      <rect x="1360" y="400" width="22" height="18" rx="9" fill="#F5F5F7"/>
+      <text x="1367" y="413" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">3</text>
+      <text x="1392" y="413" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#D2D2D7">&#x25BE;</text>
+    </g>
+
+    <!-- File 5 -->
+    <g id="KB-File-RAG">
+      <rect x="1118" y="426" width="24" height="24" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="1123" y="442" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="1150" y="438" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">CS7180_RAG_Survey.pdf</text>
+      <text x="1150" y="452" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">3.1 MB · 93 chunks</text>
+      <rect x="1354" y="434" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="445" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- File 6 -->
+    <g id="KB-File-Attention">
+      <rect x="1118" y="466" width="24" height="24" rx="5" fill="rgba(255,59,48,0.08)"/>
+      <text x="1123" y="482" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#FF3B30">PDF</text>
+      <text x="1150" y="478" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">Attention_Is_All_You_Nee...</text>
+      <text x="1150" y="492" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">1.8 MB · 67 chunks</text>
+      <rect x="1354" y="474" width="40" height="16" rx="8" fill="rgba(45,198,83,0.10)"/>
+      <text x="1359" y="485" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#2DC653">READY</text>
+    </g>
+
+    <!-- File 7 (Processing) -->
+    <g id="KB-File-MLNotes">
+      <rect x="1118" y="506" width="24" height="24" rx="5" fill="rgba(245,166,35,0.10)"/>
+      <text x="1123" y="522" font-family="Poppins, Helvetica Neue, sans-serif" font-size="8.5" font-weight="700" fill="#F5A623">TXT</text>
+      <text x="1150" y="518" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" font-weight="450" fill="#1D1D1F">ml_study_notes.txt</text>
+      <text x="1150" y="532" font-family="Poppins, Helvetica Neue, sans-serif" font-size="10.5" fill="#AEAEB2">34 KB · 12 chunks</text>
+      <rect x="1330" y="514" width="64" height="16" rx="8" fill="rgba(245,166,35,0.10)"/>
+      <text x="1336" y="525" font-family="Poppins, Helvetica Neue, sans-serif" font-size="9" font-weight="600" fill="#F5A623">PROCESSING</text>
+    </g>
+
+    <!-- Separator -->
+    <line x1="1094" y1="548" x2="1394" y2="548" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+
+    <!-- Folder 3: Project Docs (collapsed) -->
+    <g id="KB-Folder-Project">
+      <text x="1094" y="575" font-family="Poppins, Helvetica Neue, sans-serif" font-size="17" fill="#AEAEB2">&#x1F4C1;</text>
+      <text x="1118" y="575" font-family="Poppins, Helvetica Neue, sans-serif" font-size="13" font-weight="500" fill="#1D1D1F">Project Docs</text>
+      <rect x="1360" y="563" width="22" height="18" rx="9" fill="#F5F5F7"/>
+      <text x="1367" y="576" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#AEAEB2">1</text>
+      <text x="1392" y="576" font-family="Poppins, Helvetica Neue, sans-serif" font-size="11" fill="#D2D2D7">&#x25B8;</text>
+    </g>
+
+    <!-- Upload Zone -->
+    <g id="KB-Upload">
+      <rect x="1086" y="820" width="316" height="40" rx="12" fill="none" stroke="rgba(0,0,0,0.10)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text x="1154" y="845" font-family="Poppins, Helvetica Neue, sans-serif" font-size="12" fill="#AEAEB2">
+        <tspan fill="#0071E3" font-weight="500">Drop files</tspan>
+        <tspan> or click to upload</tspan>
+      </text>
+    </g>
+  </g>
+
+</svg>
