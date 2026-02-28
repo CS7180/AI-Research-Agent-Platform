@@ -188,6 +188,29 @@ AI-Research-Agent-Platform/
 - State: Use React hooks (useState, useReducer). Avoid external state libraries
   unless complexity demands it.
 
+# 2.4 Tailwind CSS Design Tokens
+All project colors, fonts, and design tokens MUST be registered in globals.css
+under Tailwind v4's `@theme inline` block so they are usable as native utility
+classes. Never use raw CSS variables with inline `style={}` props.
+
+Pattern:
+  @theme inline {
+    --color-primary: #0071E3;
+    --color-text-secondary: #424245;
+    --color-nav-bg: rgba(29, 29, 31, 0.85);
+    --font-sans: 'Poppins', system-ui, sans-serif;
+  }
+
+This makes classes like `bg-primary`, `text-text-secondary`, `bg-nav-bg`,
+and `font-sans` available throughout components — eliminating the need
+for any `style={{ color: "var(--text-primary)" }}` patterns.
+
+When implementing a mockup or design:
+  1. Extract every color, font, shadow, and spacing value from the design
+  2. Register each as a `--color-*` or `--font-*` variable in `@theme inline`
+  3. Reference exclusively via Tailwind classes (e.g., `bg-primary`, `text-nav-text`)
+  4. For gradients, use Tailwind's `bg-gradient-to-*` + `from-*` / `to-*` utilities
+
 # 2.3 General
 - Max line length: 88 (Python), 100 (TypeScript)
 - UTF-8 encoding everywhere
@@ -378,6 +401,24 @@ Example full commit:
 - DO implement loading, error, and empty states for every data-fetching component
 - DO use semantic HTML elements (main, nav, article, section)
 - DO ensure all interactive elements are keyboard-accessible
+- DO use real HTML form elements (<input>, <form>, <button>, <label>) — never
+  fake interactive controls with <span> or <div>
+- DO put shared TypeScript interfaces/types in src/types/ and import them —
+  never define data shapes inline within component files
+- DO use Tailwind @theme tokens for ALL design values — colors, fonts, shadows.
+  If a value comes from a mockup, it goes in @theme first, then is referenced
+  via a utility class. Zero tolerance for inline style={{}} on color/font/bg.
+- DO map semantic HTML elements to UI roles:
+    - Page sections → <main>, <section>
+    - Panel/card headers → <header> + <h1>/<h2>
+    - Navigation links → <nav>
+    - AI responses → <article>
+    - Chat messages area → role="log" + aria-live="polite"
+    - Lists (sessions, files) → <ul>/<li> or <ol>/<li>
+    - Clickable list items → <button> (not clickable <div>)
+    - File trees → role="tree" / role="treeitem" + aria-expanded
+    - Separators → <hr> (not <div> with border-top)
+    - Text inputs → <input> + <label> (with htmlFor or sr-only)
 
 ## Security
 - DO validate Supabase JWT on every API endpoint
@@ -410,6 +451,17 @@ Example full commit:
 - DON'T install heavy state management libraries (Redux, MobX) unless justified
 - DON'T fetch data in useEffect when React Server Components or SWR/React Query suffice
 - DON'T hardcode API URLs — use environment variables (NEXT_PUBLIC_API_URL)
+- DON'T use inline style={{}} for colors, backgrounds, fonts, or borders —
+  register values as Tailwind @theme tokens and use utility classes instead
+- DON'T use <div> as a catch-all — choose the correct semantic element
+  (<header>, <nav>, <main>, <article>, <section>, <form>, <button>, <ul>/<li>)
+- DON'T fake interactive elements — a clickable item must be a <button> or <a>,
+  a text input must be an <input> with a <label>, not a styled <span>
+- DON'T define TypeScript types/interfaces inline in component files —
+  put them in src/types/ and import them
+- DON'T omit accessibility attributes — every interactive region needs
+  an aria-label, every form input needs a label, every live-updating
+  region (e.g., chat messages) needs aria-live
 
 ## Dependencies
 - DON'T install new dependencies without team discussion
