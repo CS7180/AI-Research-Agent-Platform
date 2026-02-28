@@ -1,6 +1,6 @@
 ---
 description: "DocMind Project Context, Tech Stack, and Guidelines"
-always_on: true
+always_on: false
 ---
 
 # DocMind — AI Research Agent Platform

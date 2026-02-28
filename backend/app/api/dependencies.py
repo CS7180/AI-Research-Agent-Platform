@@ -33,5 +33,5 @@ async def get_authenticated_user(
 
 
 # Type aliases for route signatures
-CurrentUser = Annotated[dict, Depends(get_authenticated_user)]
+CurrentUser = Annotated[str, Depends(get_authenticated_user)]
 SupabaseClient = Annotated[Client, Depends(get_supabase_client)]
