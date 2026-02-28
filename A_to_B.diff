@@ -1,0 +1,1959 @@
+diff --git a/.agents/rules.md b/.agents/rules.md
+new file mode 100644
+index 0000000..5b1604b
+--- /dev/null
++++ b/.agents/rules.md
+@@ -0,0 +1,519 @@
++---
++description: "DocMind Project Context, Tech Stack, and Guidelines"
++always_on: true
++---
++
++# DocMind — AI Research Agent Platform
++This file provides project-wide context, conventions, and guardrails for AI-assisted development. All agents (Antigravity, Copilot, Cursor, etc.) should treat this as the source of truth for how code is written, reviewed, and shipped in this repository.
++
++## 1. PROJECT CONTEXT
++
++# 1.1 Project Overview
++DocMind is a full-stack AI-powered research agent platform for CS students.
++Users upload documents (PDF, Markdown, TXT) to build a private knowledge base,
++then query it via text and image inputs through an intelligent LangGraph agent
++that orchestrates retrieval, web search, and code execution.
++
++Three entry points:
++  - Web UI (Next.js) — primary experience (REST API + SSE streaming)
++  - MCP Server — AI clients (Claude Desktop, Cursor) query KB directly
++  - n8n + Slack — team members query from Slack via webhook workflow
++
++# 1.2 Tech Stack & Versions
++
++## Backend
++- Python 3.11+
++- FastAPI (async-native)
++- LangGraph (agent orchestration with conditional branching)
++- LangChain (provider adapters: langchain-google-genai, langchain-openai, langchain-community)
++- Celery + Redis (async task queue for document processing)
++- MCP Python SDK (Model Context Protocol server)
++- Pydantic v2 (request/response validation)
++- RAGAS (RAG evaluation framework)
++
++## Frontend
++- Next.js 14+ (App Router)
++- TypeScript (strict mode)
++- Tailwind CSS (utility-first styling)
++- Server-Sent Events (SSE) for LLM streaming
++
++## Database & Storage
++- Supabase (managed PostgreSQL + Auth + Storage)
++- pgvector (vector similarity search via Supabase extension)
++- Supabase Storage (S3-compatible file storage with RLS)
++- Redis (conversation cache, Celery broker)
++
++## AI / Multi-Modal
++- Primary LLM: Google Gemini 2.5 Flash (vision + tool-calling, 1M context)
++- Embeddings: gemini-embedding-001 (768-dim)
++- Fallback LLM: Gemini 2.5 Pro (complex reasoning)
++- Provider-agnostic: switchable to OpenAI / Qwen via env vars
++
++## Infrastructure
++- Docker Compose (FastAPI, Redis, Celery worker)
++- GitHub Actions (CI/CD: lint, test, build, security scan)
++- n8n (Slack integration workflow)
++
++# 1.3 Architecture — Folder Structure
++The project follows a layered monorepo structure:
++
++AI-Research-Agent-Platform/
++├── backend/                      # Python FastAPI backend
++│   ├── app/
++│   │   ├── main.py               # FastAPI application entry point
++│   │   ├── api/
++│   │   │   ├── routes/           # API route handlers (documents, chat, auth)
++│   │   │   ├── dependencies.py   # Shared FastAPI dependencies (auth, DB)
++│   │   │   └── middleware.py     # CORS, rate limiting, error handling
++│   │   ├── agent/
++│   │   │   ├── graph.py          # LangGraph agent workflow definition
++│   │   │   ├── nodes.py          # Agent graph nodes (retrieve, search, generate)
++│   │   │   ├── tools.py          # Tool definitions (KB retrieval, web search, code exec)
++│   │   │   └── state.py          # Agent state schema
++│   │   ├── services/
++│   │   │   ├── document.py       # Document processing pipeline
++│   │   │   ├── embedding.py      # Embedding generation (provider-agnostic)
++│   │   │   ├── retrieval.py      # Hybrid search (BM25 + semantic + re-ranking)
++│   │   │   ├── llm.py            # LLM adapter (Gemini / OpenAI / Qwen)
++│   │   │   └── storage.py        # Supabase Storage interactions
++│   │   ├── models/
++│   │   │   ├── document.py       # SQLAlchemy / Supabase document models
++│   │   │   └── user.py           # User model
++│   │   ├── schemas/
++│   │   │   ├── document.py       # Pydantic request/response schemas
++│   │   │   ├── chat.py           # Chat message schemas
++│   │   │   └── common.py         # Shared schemas (pagination, errors)
++│   │   ├── core/
++│   │   │   ├── config.py         # Settings via pydantic-settings (env vars)
++│   │   │   ├── security.py       # Supabase JWT validation
++│   │   │   └── constants.py      # App-wide constants
++│   │   └── workers/
++│   │       └── tasks.py          # Celery tasks (document ingestion)
++│   ├── mcp_server/
++│   │   ├── server.py             # MCP Server entry point
++│   │   └── tools/                # MCP tool implementations
++│   ├── tests/
++│   │   ├── unit/                 # Unit tests (services, models)
++│   │   ├── integration/          # Integration tests (API endpoints)
++│   │   └── conftest.py           # Shared fixtures
++│   ├── pyproject.toml            # Python project metadata + dependencies
++│   ├── Dockerfile                # Backend container
++│   └── alembic/                  # Database migrations (if needed)
++│
++├── frontend/                     # Next.js frontend
++│   ├── src/
++│   │   ├── app/                  # App Router pages and layouts
++│   │   │   ├── (auth)/           # Auth pages (login, callback)
++│   │   │   ├── chat/             # Chat interface page
++│   │   │   ├── documents/        # Document management page
++│   │   │   └── layout.tsx        # Root layout
++│   │   ├── components/
++│   │   │   ├── ui/               # Reusable UI primitives
++│   │   │   ├── chat/             # Chat-specific components
++│   │   │   └── documents/        # Document-specific components
++│   │   ├── hooks/                # Custom React hooks
++│   │   ├── lib/
++│   │   │   ├── api.ts            # API client (fetch wrapper)
++│   │   │   ├── supabase.ts       # Supabase client initialization
++│   │   │   └── sse.ts            # SSE stream handler
++│   │   ├── types/                # TypeScript type definitions
++│   │   └── styles/               # Global styles
++│   ├── public/                   # Static assets
++│   ├── package.json
++│   ├── tsconfig.json
++│   ├── tailwind.config.ts
++│   └── next.config.mjs
++│
++├── docker-compose.yml            # Production compose
++├── docker-compose.dev.yml        # Dev compose (hot reload)
++├── docs/
++│   ├── PRD.md                    # Product Requirements Document
++│   ├── architecture.md           # Architecture diagrams and decisions
++│   └── api.md                    # API documentation
++├── .github/
++│   └── workflows/
++│       ├── ci.yml                # CI pipeline (lint, test, build)
++│       └── deploy.yml            # Deployment pipeline
++├── .env.example                  # Template for environment variables
++├── .agents/
++│   └── rules.md                  # THIS FILE
++└── README.md
++
++# 1.4 Key Architecture Patterns
++- Provider-Agnostic AI Layer: All LLM/embedding calls go through adapter classes
++  configured via env vars (LLM_PROVIDER, EMBEDDING_PROVIDER). Never hardcode a
++  specific AI provider.
++- LangGraph Stateful Agent: The agent is a directed graph with conditional edges.
++  Nodes = tool invocations. State schema defined in agent/state.py.
++- Async-First: FastAPI endpoints are async. Document processing uses Celery tasks.
++  Never block the event loop with synchronous I/O.
++- Supabase as BaaS: Auth, PostgreSQL, Storage, and pgvector are all managed by
++  Supabase. Use Supabase client libraries, not raw SQL, where possible.
++- Row Level Security (RLS): All data access is scoped per-user at the DB level.
++  Never bypass RLS; always pass authenticated user context.
++- SSE Streaming: Chat responses stream via Server-Sent Events. Do not use
++  WebSockets for LLM output streaming.
++
++## 2. NAMING CONVENTIONS & CODING STANDARDS
++
++# 2.1 Python (Backend)
++- Style: PEP 8 + Black formatter (line length: 88)
++- Linter: Ruff (replaces flake8 + isort + pyflakes)
++- Type hints: Required on all function signatures (use `from __future__ import annotations`)
++- Naming:
++    - Files/modules: snake_case (e.g., document_service.py)
++    - Classes: PascalCase (e.g., DocumentService, ChatRequest)
++    - Functions/methods: snake_case (e.g., process_document, get_user_by_id)
++    - Constants: UPPER_SNAKE_CASE (e.g., MAX_FILE_SIZE_MB, DEFAULT_CHUNK_SIZE)
++    - Private methods/attrs: single leading underscore (e.g., _validate_mime_type)
++- Pydantic models: Use Pydantic v2 with model_validator where needed.
++  Schemas go in app/schemas/. DB models go in app/models/.
++- Imports: Group in order — stdlib, third-party, local. Use absolute imports.
++- Docstrings: Google-style docstrings on all public functions and classes.
++- Async: Use `async def` for all FastAPI route handlers and I/O-bound service methods.
++
++# 2.2 TypeScript / React (Frontend)
++- Style: Prettier (printWidth: 100, singleQuote: true, semi: true)
++- Linter: ESLint with next/core-web-vitals + typescript-eslint
++- Type safety: TypeScript strict mode. No `any` types unless explicitly justified.
++- Naming:
++    - Files: kebab-case for pages/routes (e.g., document-list.tsx)
++    - Components: PascalCase files and exports (e.g., ChatMessage.tsx → export ChatMessage)
++    - Hooks: camelCase with `use` prefix (e.g., useDocuments.ts → export useDocuments)
++    - Types/Interfaces: PascalCase with descriptive names (e.g., DocumentMetadata, ChatMessage)
++    - Constants: UPPER_SNAKE_CASE
++    - Utilities: camelCase (e.g., formatTimestamp, parseSSEEvent)
++- Components: Functional components only. Use React Server Components where possible.
++  Client components marked with 'use client' directive.
++- State: Use React hooks (useState, useReducer). Avoid external state libraries
++  unless complexity demands it.
++
++# 2.3 General
++- Max line length: 88 (Python), 100 (TypeScript)
++- UTF-8 encoding everywhere
++- LF line endings (no CRLF)
++- Trailing newline at end of file
++- No trailing whitespace
++
++## 3. TESTING STRATEGY
++
++# 3.1 Backend Testing
++- Framework: pytest + pytest-asyncio
++- Coverage target: ≥ 80% line coverage on services/ and agent/
++- Test structure:
++    - tests/unit/ — isolated unit tests (mock external services)
++    - tests/integration/ — API endpoint tests (use TestClient + test Supabase project)
++- Fixtures: Shared fixtures in conftest.py (mock Supabase client, mock Redis, sample docs)
++- Naming: test files mirror source files (e.g., services/document.py → tests/unit/test_document.py)
++- Async tests: Use @pytest.mark.asyncio for async test functions
++- Mocking: Use unittest.mock or pytest-mock. Mock external APIs (Supabase, Gemini, Redis)
++  at the service boundary, not inside implementation.
++- Key test scenarios:
++    - Document pipeline: upload → validate → chunk → embed → store (happy + error paths)
++    - RAG query: retrieval → generation → streaming (with/without relevant docs)
++    - Auth: valid JWT → access; invalid/expired JWT → 401; wrong user → 403
++    - Agent: tool selection based on intent; retry on tool failure; fallback behavior
++
++# 3.2 Frontend Testing
++- Framework: Jest + React Testing Library
++- Coverage target: ≥ 70% on components/ and hooks/
++- E2E: Playwright for critical user flows (login → upload → chat → receive answer)
++- Test naming: ComponentName.test.tsx or hook-name.test.ts
++- Key test scenarios:
++    - Document upload flow (file validation, progress, success/error states)
++    - Chat interface (send message, stream response, display citations)
++    - Auth flow (login redirect, session persistence, logout)
++
++# 3.3 AI / RAG Evaluation
++- Framework: RAGAS
++- Benchmark: 30-question set with ground-truth answers (stored in eval/benchmark.json)
++- Metrics: Faithfulness ≥ 0.85, Answer Relevancy ≥ 0.80, Context Precision ≥ 0.75, Context Recall ≥ 0.70
++- Run: `python -m pytest tests/eval/ --ragas` or dedicated eval script
++
++## 4. PRD & DESIGN REFERENCES
++
++# 4.1 Product Requirements Document
++Location: docs/PRD.md
++The PRD is the source of truth for all feature requirements, user stories,
++acceptance criteria, and prioritization (MoSCoW). Always consult the PRD
++before implementing a new feature.
++
++Key sections:
++  - §3: Target Audience & User Stories (US-01 through US-10)
++  - §4: Tech Stack (authoritative versions and rationale)
++  - §5: System Architecture (data flows, component layers)
++  - §6: Core Features (detailed specifications)
++  - §7: Non-Functional Requirements (performance targets, security)
++  - §9: Sprint Plan (issue numbers and estimates)
++
++# 4.2 Key UI Components & Expected Behavior
++
++## Chat Interface (Primary)
++- Full-screen chat layout with message history and input bar
++- Messages stream in real-time via SSE (token-by-token rendering)
++- Bot responses include inline source citations (clickable → document viewer)
++- Image upload button in input bar for multi-modal queries
++- Loading skeleton while agent processes query
++- Error state with retry option on failure
++
++## Document Management
++- Grid/list view of uploaded documents (filename, date, status badge)
++- Status badges: PENDING (yellow), PROCESSING (blue/animated), READY (green), FAILED (red)
++- Upload dropzone supporting drag-and-drop (PDF, MD, TXT only; max 50MB)
++- Delete confirmation modal with warning about permanent removal
++- Empty state with CTA to upload first document
++
++## Authentication
++- Google OAuth sign-in button (Supabase Auth)
++- Protected routes redirect to login if unauthenticated
++- Session persisted via Supabase client-side auth helpers
++
++# 4.3 User Flows
++
++## Flow 1: Document Upload
++1. User clicks upload / drags file → client validates type & size
++2. File uploaded to Supabase Storage via API → returns document ID
++3. Status shows PENDING → PROCESSING (Celery task runs)
++4. Backend: extract text → chunk (512 tokens, 64 overlap) → embed → store vectors
++5. Status updates to READY (or FAILED with error message)
++6. Document appears in list, searchable immediately
++
++## Flow 2: Chat Query
++1. User types question (optionally attaches image) → sends to /api/chat
++2. LangGraph agent receives query → classifies intent
++3. Agent selects tool(s): KB Retrieval, Web Search, and/or Code Execution
++4. If KB Retrieval: hybrid BM25 + semantic search → re-rank → top-k chunks
++5. LLM generates grounded answer with citations → streams via SSE
++6. Frontend renders tokens as they arrive + citation links
++
++## Flow 3: MCP Client Query
++1. External client (Cursor/Claude) connects to MCP Server
++2. Client lists available tools (retrieval, search, code_exec)
++3. Client invokes tool with parameters → MCP Server routes to backend service
++4. Results returned via MCP protocol
++
++## 5. SCRUM & WORKFLOW INSTRUCTIONS
++
++# 5.1 Branch Naming Convention
++Format: <type>/<issue-number>-<short-description>
++Examples:
++  feature/3-document-upload-pipeline
++  feature/8-langgraph-agent
++  bugfix/15-fix-embedding-dimension
++  chore/20-update-docker-compose
++  hotfix/22-auth-token-expiry
++
++Types: feature, bugfix, chore, hotfix, docs, refactor, test
++Always branch from `main`. Keep branches short-lived (< 1 week).
++
++# 5.2 Commit Message Format
++Follow Conventional Commits (https://www.conventionalcommits.org/):
++
++Format: <type>(<scope>): <description>
++
++Types: feat, fix, docs, style, refactor, test, chore, ci, perf
++Scope: backend, frontend, agent, docs, docker, ci (optional but encouraged)
++
++Examples:
++  feat(backend): add document upload endpoint with Supabase Storage
++  fix(agent): handle empty retrieval results gracefully
++  test(backend): add unit tests for embedding service
++  docs: update PRD with Sprint 2 scope changes
++  chore(docker): add hot-reload to dev compose
++
++Body (optional): Explain WHY, not WHAT. Reference issues with "Refs #<number>".
++Footer: Use "Closes #<number>" to auto-close GitHub Issues on merge.
++
++Example full commit:
++  feat(backend): implement hybrid BM25 + semantic retrieval
++
++  Combines keyword (BM25) and vector (pgvector cosine) search with RRF
++  re-ranking to improve recall on diverse query types.
++
++  Closes #5
++
++# 5.3 Pull Request Workflow
++1. Create PR from feature branch → main
++2. PR title follows commit format: "feat(backend): implement document upload"
++3. PR description must include:
++   - Summary of changes
++   - Link to GitHub Issue: "Closes #<number>" or "Refs #<number>"
++   - Screenshots/recordings for UI changes
++   - Testing notes (what was tested, how to verify)
++4. Required: At least 1 approval from team member
++5. Required: All CI checks pass (lint, test, build)
++6. Squash merge to main (clean linear history)
++7. Delete branch after merge
++
++# 5.4 GitHub Issue References
++- In commits: "Refs #3" (reference) or "Closes #3" (auto-close on merge)
++- In code comments (sparingly): # TODO(#15): Optimize chunking for large PDFs
++- In PR descriptions: Always link the parent issue
++- Sprint issues are numbered #1–#13 per the PRD Sprint Plan (§9)
++
++## 6. DO'S AND DON'TS
++
++# 6.1 DO's ✅
++
++## Architecture
++- DO use the provider-agnostic adapter pattern for all AI calls (LLM, embeddings, vision)
++- DO route all database access through Supabase client with authenticated context (RLS)
++- DO use Celery tasks for any processing that takes > 2 seconds
++- DO use Pydantic schemas for ALL request/response validation
++- DO use environment variables for all configuration (pydantic-settings)
++- DO design LangGraph nodes to be idempotent and retriable
++- DO use dependency injection via FastAPI's Depends() for services
++
++## Code Quality
++- DO write type hints on every function signature (Python and TypeScript)
++- DO write Google-style docstrings on all public functions and classes
++- DO keep functions under 50 lines; extract helpers for complex logic
++- DO handle errors explicitly — use custom exception classes, not bare except
++- DO log structured messages (use Python logging with JSON format)
++- DO write tests alongside feature code (not as an afterthought)
++
++## Frontend
++- DO use React Server Components by default; mark 'use client' only when needed
++- DO use Tailwind utility classes; avoid inline styles
++- DO implement loading, error, and empty states for every data-fetching component
++- DO use semantic HTML elements (main, nav, article, section)
++- DO ensure all interactive elements are keyboard-accessible
++
++## Security
++- DO validate Supabase JWT on every API endpoint
++- DO use RLS policies — never trust client-side user ID
++- DO sanitize all user inputs (filenames, query text)
++- DO set CORS to allow only the frontend origin in production
++- DO use HTTPS in production for all API communication
++
++# 6.2 DON'TS ❌
++
++## Architecture
++- DON'T hardcode AI provider (OpenAI, Gemini, etc.) — always use the adapter
++- DON'T make synchronous blocking calls in async FastAPI handlers
++- DON'T bypass Supabase Auth or RLS for "convenience"
++- DON'T store secrets in code, .env files committed to git, or frontend bundles
++- DON'T use WebSockets for LLM streaming — use SSE
++- DON'T put business logic in API route handlers — delegate to services
++- DON'T create circular imports between modules
++
++## Code Quality
++- DON'T use `any` type in TypeScript (use `unknown` + type guards if needed)
++- DON'T use bare `except:` or `except Exception:` without logging
++- DON'T leave TODO/FIXME without a GitHub Issue reference (e.g., TODO(#15))
++- DON'T use print() for logging — use the logging module
++- DON'T commit commented-out code
++- DON'T use magic numbers — define named constants
++
++## Frontend
++- DON'T use class components — functional components only
++- DON'T install heavy state management libraries (Redux, MobX) unless justified
++- DON'T fetch data in useEffect when React Server Components or SWR/React Query suffice
++- DON'T hardcode API URLs — use environment variables (NEXT_PUBLIC_API_URL)
++
++## Dependencies
++- DON'T install new dependencies without team discussion
++- DON'T use unmaintained or low-download packages
++- DON'T pin to exact versions — use compatible release specifiers (~= for Python, ^ for npm)
++
++# 6.3 Preferred Dependencies
++
++## Backend (Python)
++- HTTP framework: FastAPI
++- Agent: LangGraph + LangChain
++- AI providers: langchain-google-genai, langchain-openai
++- Task queue: Celery + Redis
++- Dependency Management: `uv` (replaces pip/venv)
++- Validation: Pydantic v2
++- Testing: pytest, pytest-asyncio, pytest-mock
++- Linting: Ruff, Black
++- PDF extraction: PyMuPDF (fitz) or pdfplumber
++- MCP: mcp (official Python SDK)
++- Evaluation: ragas
++
++## Frontend (TypeScript)
++- Framework: Next.js (App Router)
++- Styling: Tailwind CSS
++- Auth: @supabase/auth-helpers-nextjs, @supabase/supabase-js
++- HTTP: Native fetch (no axios)
++- Testing: Jest, React Testing Library, Playwright
++- Linting: ESLint, Prettier
++
++## Avoid These
++- Flask / Django (use FastAPI)
++- SQLAlchemy ORM (use Supabase client; raw SQL only for complex pgvector queries)
++- axios (use native fetch)
++- Redux / MobX (use React hooks + context)
++- Moment.js (use date-fns or Intl API)
++- Express.js (backend is Python, not Node)
++
++# 6.4 Security Requirements
++- All API endpoints require valid Supabase JWT (except /health)
++- File uploads: MIME type whitelist (application/pdf, text/markdown, text/plain)
++- File size limit: 50MB
++- No user-uploaded files served directly — always through Supabase Storage signed URLs
++- Rate limiting on chat and upload endpoints
++- Input sanitization on all user-provided strings
++- OWASP Top 10 awareness (injection, XSS, CSRF, etc.)
++- Content Security Policy headers on frontend
++
++# 6.5 Accessibility Requirements
++- WCAG 2.1 Level AA compliance target
++- All images have alt text
++- All form inputs have associated labels
++- Focus management for modals and dynamic content
++- Sufficient color contrast ratios (4.5:1 for normal text)
++- Keyboard navigation for all interactive elements
++- Screen reader support (aria-live regions for streaming chat)
++- Semantic HTML structure (landmarks, headings hierarchy)
++
++## 7. ENVIRONMENT VARIABLES
++All configuration is via environment variables. See .env.example for the full list.
++
++Required:
++  SUPABASE_URL             — Supabase project URL
++  SUPABASE_ANON_KEY        — Supabase anonymous (public) key
++  SUPABASE_SERVICE_KEY     — Supabase service role key (backend only, never expose)
++  REDIS_URL                — Redis connection string
++  LLM_PROVIDER             — gemini | openai | qwen
++  LLM_MODEL                — e.g., gemini-2.5-flash, gpt-4o-mini
++  EMBEDDING_PROVIDER       — gemini | openai | qwen
++  EMBEDDING_MODEL          — e.g., gemini-embedding-001
++  GOOGLE_API_KEY           — Gemini API key (if LLM_PROVIDER=gemini)
++
++Optional:
++  OPENAI_API_KEY           — OpenAI API key (if using OpenAI provider)
++  QWEN_API_KEY             — Qwen API key (if using Qwen provider)
++  CELERY_BROKER_URL        — Defaults to REDIS_URL
++  LOG_LEVEL                — DEBUG | INFO | WARNING | ERROR (default: INFO)
++  NEXT_PUBLIC_API_URL      — Backend API URL for frontend
++  NEXT_PUBLIC_SUPABASE_URL — Supabase URL for frontend client
++
++## 8. DOCKER & LOCAL DEVELOPMENT
++Local dev: `docker compose -f docker-compose.dev.yml up`
++Services: FastAPI (port 8000), Redis (port 6379), Celery worker
++Frontend: `cd frontend && npm run dev` (port 3000)
++Supabase: Cloud-hosted (no local Supabase container needed)
++
++Hot reload:
++  - Backend: uvicorn with --reload flag (mounted volume in dev compose)
++  - Frontend: Next.js dev server with Fast Refresh
++  - Celery: watchmedo auto-restart (or manual restart)
++
++## 9. CI/CD PIPELINE
++Triggered on: Every push to main, every PR
++
++Jobs:
++  1. Lint (backend): ruff check + black --check
++  2. Lint (frontend): eslint + prettier --check
++  3. Test (backend): pytest with coverage report
++  4. Test (frontend): jest + playwright
++  5. Build: Docker image build (verify Dockerfile is valid)
++  6. Security: uv pip audit (Python) + npm audit (Node)
++
++PR merge requirements:
++  - All CI jobs pass
++  - At least 1 approving review
++  - No unresolved conversations
++
++
+diff --git a/frontend/src/app/globals.css b/frontend/src/app/globals.css
+index 6fcf85a..b0251ec 100644
+--- a/frontend/src/app/globals.css
++++ b/frontend/src/app/globals.css
+@@ -1,49 +1,43 @@
+-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,450;0,500;0,600;0,700;1,400&display=swap');
++@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+ @import "tailwindcss";
+ 
+-:root {
+-  /* ── Core palette from mockup ── */
+-  --bg-page: #F5F5F7;
+-  --bg-card: #FFFFFF;
+-  --bg-input: #F5F5F7;
++@theme inline {
++  /* ── Typography ── */
++  --font-sans: 'Poppins', 'Helvetica Neue', system-ui, sans-serif;
++  --font-mono: 'Menlo', ui-monospace, monospace;
++
++  /* ── Core Palette (from mockup SVG) ── */
++  --color-page-bg: #F5F5F7;
++  --color-card-bg: #FFFFFF;
++  --color-input-bg: #F5F5F7;
+ 
+   --color-primary: #0071E3;
+   --color-primary-dark: #5E5CE6;
+ 
+-  --text-primary: #1D1D1F;
+-  --text-secondary: #424245;
+-  --text-tertiary: #86868B;
+-  --text-muted: #AEAEB2;
+-  --text-placeholder: #D2D2D7;
++  --color-text-primary: #1D1D1F;
++  --color-text-secondary: #424245;
++  --color-text-tertiary: #86868B;
++  --color-text-muted: #AEAEB2;
++  --color-text-placeholder: #D2D2D7;
+ 
+-  --nav-bg: rgba(29, 29, 31, 0.85);
+-  --nav-text: #F5F5F7;
+-  --nav-text-dim: rgba(245, 245, 247, 0.7);
++  --color-nav-bg: rgba(29, 29, 31, 0.85);
++  --color-nav-text: #F5F5F7;
++  --color-nav-text-dim: rgba(245, 245, 247, 0.7);
+ 
+-  --border-light: rgba(0, 0, 0, 0.06);
+-  --border-medium: rgba(0, 0, 0, 0.08);
+-  --border-dashed: rgba(0, 0, 0, 0.10);
++  --color-border-light: rgba(0, 0, 0, 0.06);
++  --color-border-medium: rgba(0, 0, 0, 0.08);
++  --color-border-dashed: rgba(0, 0, 0, 0.10);
+ 
+-  --color-green: #2DC653;
+-  --color-red: #FF3B30;
+-  --color-orange: #F5A623;
++  --color-status-green: #2DC653;
++  --color-status-red: #FF3B30;
++  --color-status-orange: #F5A623;
+   --color-blue-accent: #64B5F6;
+-
+-  --font-body: 'Poppins', 'Helvetica Neue', system-ui, sans-serif;
+-  --font-mono: 'Menlo', ui-monospace, monospace;
+-}
+-
+-@theme inline {
+-  --color-background: var(--bg-page);
+-  --color-foreground: var(--text-primary);
+-  --font-sans: var(--font-body);
+-  --font-mono: var(--font-mono);
+ }
+ 
+ body {
+-  background: var(--bg-page);
+-  color: var(--text-primary);
+-  font-family: var(--font-body);
++  background: var(--color-page-bg);
++  color: var(--color-text-primary);
++  font-family: var(--font-sans);
+   margin: 0;
+   -webkit-font-smoothing: antialiased;
+   -moz-osx-font-smoothing: grayscale;
+@@ -66,6 +60,6 @@ body {
+ }
+ 
+ .custom-scrollbar::-webkit-scrollbar-thumb {
+-  background: var(--text-placeholder);
++  background: var(--color-text-placeholder);
+   border-radius: 2px;
+ }
+\ No newline at end of file
+diff --git a/frontend/src/app/layout.tsx b/frontend/src/app/layout.tsx
+index 55c0743..a100a17 100644
+--- a/frontend/src/app/layout.tsx
++++ b/frontend/src/app/layout.tsx
+@@ -1,10 +1,17 @@
+-import type { Metadata } from "next";
+-import "./globals.css";
++import type { Metadata } from 'next';
++import { Poppins } from 'next/font/google';
++import './globals.css';
++
++const poppins = Poppins({
++  variable: '--font-poppins',
++  subsets: ['latin'],
++  weight: ['300', '400', '500', '600', '700'],
++});
+ 
+ export const metadata: Metadata = {
+-  title: "DocMind — AI Research Agent",
++  title: 'DocMind — AI Research Agent',
+   description:
+-    "AI-powered research agent platform for CS students. Upload documents, build a knowledge base, and ask questions grounded in your own course materials.",
++    'AI-powered research agent platform for CS students. Upload documents, build a knowledge base, and ask questions grounded in your own course materials.',
+ };
+ 
+ export default function RootLayout({
+@@ -14,7 +21,7 @@ export default function RootLayout({
+ }>) {
+   return (
+     <html lang="en">
+-      <body className="antialiased">{children}</body>
++      <body className={`${poppins.variable} antialiased`}>{children}</body>
+     </html>
+   );
+ }
+diff --git a/frontend/src/app/page.tsx b/frontend/src/app/page.tsx
+index 4cf1891..f734d2b 100644
+--- a/frontend/src/app/page.tsx
++++ b/frontend/src/app/page.tsx
+@@ -1,22 +1,19 @@
+-import Navbar from "@/components/Navbar";
+-import LeftSidebar from "@/components/LeftSidebar";
+-import ChatArea from "@/components/ChatArea";
+-import RightSidebar from "@/components/RightSidebar";
++import Navbar from '@/components/ui/Navbar';
++import ChatSidebar from '@/components/chat/ChatSidebar';
++import ChatArea from '@/components/chat/ChatArea';
++import KnowledgeBase from '@/components/documents/KnowledgeBase';
+ 
+ export default function Home() {
+   return (
+     <>
+       <Navbar />
+ 
+-      {/* Main content area — sits below the 44px navbar */}
+-      <div
+-        className="flex gap-4 px-7 pb-5"
+-        style={{ paddingTop: "calc(44px + 28px)", height: "100vh", boxSizing: "border-box" }}
+-      >
+-        <LeftSidebar />
++      {/* Main content — three-column layout below the 44px navbar */}
++      <main className="flex gap-4 px-7 pb-5 pt-[72px] h-screen box-border">
++        <ChatSidebar />
+         <ChatArea />
+-        <RightSidebar />
+-      </div>
++        <KnowledgeBase />
++      </main>
+     </>
+   );
+ }
+diff --git a/frontend/src/components/ChatArea.tsx b/frontend/src/components/ChatArea.tsx
+deleted file mode 100644
+index fd6abb8..0000000
+--- a/frontend/src/components/ChatArea.tsx
++++ /dev/null
+@@ -1,269 +0,0 @@
+-export default function ChatArea() {
+-    return (
+-        <section className="flex-1 min-w-0 h-full rounded-[18px] bg-white card-shadow flex flex-col overflow-hidden">
+-            {/* ══════ Chat header ══════ */}
+-            <div className="pt-6 pb-3 px-6" style={{ borderBottom: "1px solid var(--border-light)" }}>
+-                <h2
+-                    className="text-[20px] font-semibold tracking-[-0.4px]"
+-                    style={{ color: "var(--text-primary)" }}
+-                >
+-                    What is 2PC?
+-                </h2>
+-                <p className="text-[12.5px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>
+-                    Based on your distributed systems notes
+-                </p>
+-            </div>
+-
+-            {/* ══════ Messages area ══════ */}
+-            <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 flex flex-col gap-5">
+-                {/* ── User message ── */}
+-                <div className="flex items-center justify-end gap-3">
+-                    <div
+-                        className="px-5 py-2.5 rounded-[20px] text-[15px] text-white max-w-[80%]"
+-                        style={{ background: "var(--color-primary)" }}
+-                    >
+-                        What is Two-Phase Commit?
+-                    </div>
+-                    <div
+-                        className="w-[28px] h-[28px] min-w-[28px] rounded-full flex items-center justify-center"
+-                        style={{
+-                            background: "linear-gradient(135deg, #E8E8ED, #D1D1D6)",
+-                        }}
+-                    >
+-                        <span
+-                            className="text-[10px] font-semibold"
+-                            style={{ color: "var(--text-tertiary)" }}
+-                        >
+-                            JD
+-                        </span>
+-                    </div>
+-                </div>
+-
+-                {/* ── AI response ── */}
+-                <div className="flex items-start gap-3">
+-                    {/* Avatar */}
+-                    <div
+-                        className="w-[28px] h-[28px] min-w-[28px] rounded-full flex items-center justify-center mt-0.5"
+-                        style={{
+-                            background: "linear-gradient(135deg, #0071E3, #5E5CE6)",
+-                        }}
+-                    >
+-                        <span className="text-[10px] font-bold text-white">D</span>
+-                    </div>
+-
+-                    {/* Content */}
+-                    <div className="flex flex-col gap-4 text-[14.5px] tracking-[-0.2px] leading-[22px] max-w-[90%]"
+-                        style={{ color: "var(--text-secondary)" }}
+-                    >
+-                        {/* Intro */}
+-                        <p className="m-0">
+-                            Two-Phase Commit (2PC) is a distributed protocol that ensures all
+-                            nodes either{" "}
+-                            <strong style={{ color: "var(--text-primary)" }}>commit</strong> or{" "}
+-                            <strong style={{ color: "var(--text-primary)" }}>abort</strong> a
+-                            transaction together. From your{" "}
+-                            <span className="font-medium" style={{ color: "var(--color-primary)" }}>
+-                                Lecture 11
+-                            </span>{" "}
+-                            slides:
+-                        </p>
+-
+-                        {/* Phase 1 */}
+-                        <p className="m-0">
+-                            <strong style={{ color: "var(--text-primary)" }}>Phase 1</strong> — the
+-                            coordinator sends{" "}
+-                            <code
+-                                className="text-xs px-2 py-0.5 rounded"
+-                                style={{
+-                                    fontFamily: "var(--font-mono)",
+-                                    background: "var(--bg-input)",
+-                                    border: "1px solid var(--border-light)",
+-                                    color: "var(--text-secondary)",
+-                                }}
+-                            >
+-                                PREPARE
+-                            </code>{" "}
+-                            and each participant votes YES or NO.
+-                        </p>
+-
+-                        {/* Phase 2 */}
+-                        <p className="m-0">
+-                            <strong style={{ color: "var(--text-primary)" }}>Phase 2</strong> — if all
+-                            voted YES, broadcast{" "}
+-                            <code
+-                                className="text-xs px-2 py-0.5 rounded"
+-                                style={{
+-                                    fontFamily: "var(--font-mono)",
+-                                    background: "var(--bg-input)",
+-                                    border: "1px solid var(--border-light)",
+-                                    color: "var(--text-secondary)",
+-                                }}
+-                            >
+-                                COMMIT
+-                            </code>{" "}
+-                            ; otherwise{" "}
+-                            <code
+-                                className="text-xs px-2 py-0.5 rounded"
+-                                style={{
+-                                    fontFamily: "var(--font-mono)",
+-                                    background: "var(--bg-input)",
+-                                    border: "1px solid var(--border-light)",
+-                                    color: "var(--text-secondary)",
+-                                }}
+-                            >
+-                                ABORT
+-                            </code>{" "}
+-                            .
+-                        </p>
+-
+-                        {/* Trade-off */}
+-                        <p className="m-0">
+-                            The key trade-off: 2PC guarantees atomicity but can{" "}
+-                            <em>block</em> if the coordinator fails mid-protocol.
+-                        </p>
+-
+-                        {/* ── Sources Card ── */}
+-                        <div
+-                            className="rounded-xl overflow-hidden"
+-                            style={{
+-                                border: "1px solid var(--border-medium)",
+-                            }}
+-                        >
+-                            {/* Sources header */}
+-                            <div
+-                                className="px-5 py-2"
+-                                style={{
+-                                    background: "var(--bg-input)",
+-                                    borderBottom: "1px solid var(--border-light)",
+-                                }}
+-                            >
+-                                <span
+-                                    className="text-[10.5px] font-semibold tracking-[0.3px]"
+-                                    style={{ color: "var(--text-muted)" }}
+-                                >
+-                                    SOURCES
+-                                </span>
+-                            </div>
+-
+-                            {/* Source 1 */}
+-                            <div className="flex items-center gap-3 px-5 py-2.5"
+-                                style={{ borderBottom: "1px solid var(--border-light)" }}
+-                            >
+-                                <div
+-                                    className="w-[22px] h-[22px] min-w-[22px] rounded-[5px] flex items-center justify-center"
+-                                    style={{ background: "rgba(255,59,48,0.08)" }}
+-                                >
+-                                    <span className="text-[8.5px] font-bold" style={{ color: "var(--color-red)" }}>
+-                                        PDF
+-                                    </span>
+-                                </div>
+-                                <span
+-                                    className="text-xs flex-1 truncate"
+-                                    style={{ color: "var(--text-secondary)", fontWeight: 450 }}
+-                                >
+-                                    CS6650_Lecture11_2PC.pdf
+-                                </span>
+-                                <span
+-                                    className="text-[9.5px] px-2 py-0.5 rounded"
+-                                    style={{
+-                                        fontFamily: "var(--font-mono)",
+-                                        background: "var(--bg-input)",
+-                                        color: "var(--text-muted)",
+-                                    }}
+-                                >
+-                                    slides 28-35
+-                                </span>
+-                            </div>
+-
+-                            {/* Source 2 */}
+-                            <div className="flex items-center gap-3 px-5 py-2.5">
+-                                <div
+-                                    className="w-[22px] h-[22px] min-w-[22px] rounded-[5px] flex items-center justify-center"
+-                                    style={{ background: "rgba(0,113,227,0.07)" }}
+-                                >
+-                                    <span className="text-[8.5px] font-bold" style={{ color: "var(--color-primary)" }}>
+-                                        MD
+-                                    </span>
+-                                </div>
+-                                <span
+-                                    className="text-xs flex-1 truncate"
+-                                    style={{ color: "var(--text-secondary)", fontWeight: 450 }}
+-                                >
+-                                    distributed_systems_notes.md
+-                                </span>
+-                                <span
+-                                    className="text-[9.5px] px-2 py-0.5 rounded"
+-                                    style={{
+-                                        fontFamily: "var(--font-mono)",
+-                                        background: "var(--bg-input)",
+-                                        color: "var(--text-muted)",
+-                                    }}
+-                                >
+-                                    chunk 5
+-                                </span>
+-                            </div>
+-                        </div>
+-
+-                        {/* ── Retrieval meta badges ── */}
+-                        <div className="flex items-center gap-2">
+-                            <span
+-                                className="text-[10px] font-medium px-2.5 py-1 rounded-full"
+-                                style={{
+-                                    background: "rgba(0,113,227,0.07)",
+-                                    color: "var(--color-primary)",
+-                                }}
+-                            >
+-                                Knowledge Base
+-                            </span>
+-                            <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+-                                2 docs · 1.2s
+-                            </span>
+-                        </div>
+-                    </div>
+-                </div>
+-            </div>
+-
+-            {/* ══════ Input bar ══════ */}
+-            <div className="px-6 pb-4 pt-2">
+-                <div
+-                    className="h-[42px] rounded-full flex items-center px-5 gap-2"
+-                    style={{ background: "var(--bg-input)" }}
+-                >
+-                    <span
+-                        className="flex-1 text-sm"
+-                        style={{ color: "var(--text-placeholder)" }}
+-                    >
+-                        Ask a follow-up...
+-                    </span>
+-                    {/* Attach */}
+-                    <button className="text-[15px] cursor-pointer bg-transparent border-none p-0"
+-                        style={{ color: "var(--text-muted)" }}
+-                    >
+-                        📎
+-                    </button>
+-                    {/* Camera */}
+-                    <button className="text-[15px] cursor-pointer bg-transparent border-none p-0"
+-                        style={{ color: "var(--text-muted)" }}
+-                    >
+-                        📷
+-                    </button>
+-                    {/* Send */}
+-                    <button
+-                        className="w-[32px] h-[32px] rounded-full flex items-center justify-center cursor-pointer border-none text-base font-semibold text-white"
+-                        style={{ background: "var(--color-primary)" }}
+-                    >
+-                        ↑
+-                    </button>
+-                </div>
+-
+-                {/* Footer text */}
+-                <p
+-                    className="text-center text-[10.5px] mt-2 mb-0"
+-                    style={{ color: "var(--text-placeholder)" }}
+-                >
+-                    Gemini 2.5 Flash · 8 documents · 523 chunks
+-                </p>
+-            </div>
+-        </section>
+-    );
+-}
+diff --git a/frontend/src/components/LeftSidebar.tsx b/frontend/src/components/LeftSidebar.tsx
+deleted file mode 100644
+index 0259306..0000000
+--- a/frontend/src/components/LeftSidebar.tsx
++++ /dev/null
+@@ -1,88 +0,0 @@
+-const sessions = [
+-    { id: 1, title: "What is 2PC?", time: "Just now", active: true },
+-    { id: 2, title: "Paxos vs Raft comparison", time: "Yesterday", active: false },
+-    { id: 3, title: "RAG chunking strategies", time: "Feb 22", active: false },
+-    { id: 4, title: "LangGraph agent design", time: "Feb 20", active: false },
+-    { id: 5, title: "BM25 hybrid search", time: "Feb 18", active: false },
+-];
+-
+-export default function LeftSidebar() {
+-    return (
+-        <aside className="w-[260px] min-w-[260px] h-full rounded-[18px] bg-white card-shadow flex flex-col overflow-hidden">
+-            {/* ── Header ── */}
+-            <div className="pt-6 pb-2 px-5">
+-                <h2
+-                    className="text-[20px] font-semibold tracking-[-0.4px]"
+-                    style={{ color: "var(--text-primary)" }}
+-                >
+-                    Chats
+-                </h2>
+-                <p className="text-[12.5px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>
+-                    Your conversations
+-                </p>
+-            </div>
+-
+-            {/* ── New Chat button ── */}
+-            <div className="px-3 pt-1 pb-2">
+-                <button
+-                    className="w-full h-[36px] rounded-[10px] flex items-center justify-center gap-1 cursor-pointer border-none"
+-                    style={{ background: "var(--bg-input)" }}
+-                >
+-                    <span className="text-base font-light" style={{ color: "var(--text-muted)" }}>
+-                        +
+-                    </span>
+-                    <span
+-                        className="text-[13px] font-medium"
+-                        style={{ color: "var(--text-secondary)" }}
+-                    >
+-                        New Chat
+-                    </span>
+-                </button>
+-            </div>
+-
+-            {/* ── Sessions ── */}
+-            <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-4">
+-                {sessions.map((s) => (
+-                    <div
+-                        key={s.id}
+-                        className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 mb-1 cursor-pointer transition-colors duration-150"
+-                        style={{
+-                            background: s.active ? "var(--color-primary)" : "transparent",
+-                        }}
+-                    >
+-                        {/* Icon circle */}
+-                        <div
+-                            className="w-[28px] h-[28px] min-w-[28px] rounded-full flex items-center justify-center text-xs"
+-                            style={{
+-                                background: s.active ? "rgba(255,255,255,0.2)" : "var(--bg-input)",
+-                                color: s.active ? "rgba(255,255,255,0.9)" : "var(--text-tertiary)",
+-                            }}
+-                        >
+-                            💬
+-                        </div>
+-
+-                        {/* Text */}
+-                        <div className="flex flex-col min-w-0">
+-                            <span
+-                                className="text-[13px] font-medium truncate"
+-                                style={{
+-                                    color: s.active ? "#FFFFFF" : "var(--text-primary)",
+-                                }}
+-                            >
+-                                {s.title}
+-                            </span>
+-                            <span
+-                                className="text-[11px]"
+-                                style={{
+-                                    color: s.active ? "rgba(255,255,255,0.65)" : "var(--text-muted)",
+-                                }}
+-                            >
+-                                {s.time}
+-                            </span>
+-                        </div>
+-                    </div>
+-                ))}
+-            </div>
+-        </aside>
+-    );
+-}
+diff --git a/frontend/src/components/Navbar.tsx b/frontend/src/components/Navbar.tsx
+deleted file mode 100644
+index 0233177..0000000
+--- a/frontend/src/components/Navbar.tsx
++++ /dev/null
+@@ -1,100 +0,0 @@
+-export default function Navbar() {
+-    return (
+-        <nav
+-            className="fixed top-0 left-0 w-full h-[44px] z-50 flex items-center px-6"
+-            style={{ background: "var(--nav-bg)" }}
+-        >
+-            {/* ── Logo ── */}
+-            <div className="flex items-center gap-2.5">
+-                <div
+-                    className="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center"
+-                    style={{
+-                        background: "linear-gradient(135deg, #0071E3, #5E5CE6)",
+-                    }}
+-                >
+-                    <span className="text-white text-sm font-bold leading-none">D</span>
+-                </div>
+-                <span
+-                    className="text-[15px] font-semibold tracking-[-0.3px]"
+-                    style={{ color: "var(--nav-text)" }}
+-                >
+-                    DocMind
+-                </span>
+-            </div>
+-
+-            {/* ── Nav Links ── */}
+-            <div className="flex items-center gap-6 ml-10">
+-                <span
+-                    className="text-xs font-medium"
+-                    style={{ color: "var(--nav-text)" }}
+-                >
+-                    Chat
+-                </span>
+-                <span className="text-xs" style={{ color: "var(--nav-text-dim)" }}>
+-                    Documents
+-                </span>
+-                <span className="text-xs" style={{ color: "var(--nav-text-dim)" }}>
+-                    Evaluation
+-                </span>
+-                <span className="text-xs" style={{ color: "var(--nav-text-dim)" }}>
+-                    Settings
+-                </span>
+-            </div>
+-
+-            {/* ── Spacer ── */}
+-            <div className="flex-1" />
+-
+-            {/* ── Right Side Indicators ── */}
+-            <div className="flex items-center gap-3">
+-                {/* Doc count */}
+-                <div
+-                    className="h-[22px] px-3 rounded-full flex items-center gap-2"
+-                    style={{
+-                        background: "rgba(255,255,255,0.1)",
+-                        border: "1px solid rgba(255,255,255,0.08)",
+-                    }}
+-                >
+-                    <span
+-                        className="w-[6px] h-[6px] rounded-full inline-block"
+-                        style={{ background: "var(--color-green)" }}
+-                    />
+-                    <span
+-                        className="text-[11px] font-medium"
+-                        style={{ color: "rgba(245,245,247,0.8)" }}
+-                    >
+-                        8 docs
+-                    </span>
+-                </div>
+-
+-                {/* Model badge */}
+-                <div
+-                    className="h-[22px] px-3 rounded-full flex items-center"
+-                    style={{ background: "rgba(0,113,227,0.15)" }}
+-                >
+-                    <span
+-                        className="text-[11px] font-medium"
+-                        style={{
+-                            fontFamily: "var(--font-mono)",
+-                            color: "var(--color-blue-accent)",
+-                        }}
+-                    >
+-                        gemini-2.5-flash
+-                    </span>
+-                </div>
+-
+-                {/* User avatar */}
+-                <div
+-                    className="w-[26px] h-[26px] rounded-full flex items-center justify-center"
+-                    style={{ background: "rgba(255,255,255,0.15)" }}
+-                >
+-                    <span
+-                        className="text-[10px] font-semibold"
+-                        style={{ color: "rgba(245,245,247,0.8)" }}
+-                    >
+-                        JD
+-                    </span>
+-                </div>
+-            </div>
+-        </nav>
+-    );
+-}
+diff --git a/frontend/src/components/RightSidebar.tsx b/frontend/src/components/RightSidebar.tsx
+deleted file mode 100644
+index 7b85280..0000000
+--- a/frontend/src/components/RightSidebar.tsx
++++ /dev/null
+@@ -1,210 +0,0 @@
+-type FileItem = {
+-    name: string;
+-    size: string;
+-    chunks: string;
+-    type: "PDF" | "MD" | "TXT";
+-    status: "READY" | "PROCESSING";
+-};
+-
+-type Folder = {
+-    name: string;
+-    icon: string;
+-    count: number;
+-    expanded: boolean;
+-    files: FileItem[];
+-};
+-
+-const folders: Folder[] = [
+-    {
+-        name: "Distributed Systems",
+-        icon: "📂",
+-        count: 4,
+-        expanded: true,
+-        files: [
+-            { name: "CS6650_Lecture11_2PC.pdf", size: "2.4 MB", chunks: "42 chunks", type: "PDF", status: "READY" },
+-            { name: "CS6650_Lecture12_3PC.pdf", size: "2.1 MB", chunks: "38 chunks", type: "PDF", status: "READY" },
+-            { name: "Raft_Consensus.pdf", size: "1.2 MB", chunks: "51 chunks", type: "PDF", status: "READY" },
+-            { name: "distributed_systems_note...", size: "89 KB", chunks: "24 chunks", type: "MD", status: "READY" },
+-        ],
+-    },
+-    {
+-        name: "AI / Machine Learning",
+-        icon: "📂",
+-        count: 3,
+-        expanded: true,
+-        files: [
+-            { name: "CS7180_RAG_Survey.pdf", size: "3.1 MB", chunks: "93 chunks", type: "PDF", status: "READY" },
+-            { name: "Attention_Is_All_You_Nee...", size: "1.8 MB", chunks: "67 chunks", type: "PDF", status: "READY" },
+-            { name: "ml_study_notes.txt", size: "34 KB", chunks: "12 chunks", type: "TXT", status: "PROCESSING" },
+-        ],
+-    },
+-    {
+-        name: "Project Docs",
+-        icon: "📁",
+-        count: 1,
+-        expanded: false,
+-        files: [],
+-    },
+-];
+-
+-function fileTypeColor(type: FileItem["type"]) {
+-    switch (type) {
+-        case "PDF":
+-            return { bg: "rgba(255,59,48,0.08)", text: "var(--color-red)" };
+-        case "MD":
+-            return { bg: "rgba(0,113,227,0.07)", text: "var(--color-primary)" };
+-        case "TXT":
+-            return { bg: "rgba(245,166,35,0.10)", text: "var(--color-orange)" };
+-    }
+-}
+-
+-function statusBadge(status: FileItem["status"]) {
+-    if (status === "READY") {
+-        return (
+-            <span
+-                className="text-[9px] font-semibold px-2 py-0.5 rounded-full"
+-                style={{
+-                    background: "rgba(45,198,83,0.10)",
+-                    color: "var(--color-green)",
+-                }}
+-            >
+-                READY
+-            </span>
+-        );
+-    }
+-    return (
+-        <span
+-            className="text-[9px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+-            style={{
+-                background: "rgba(245,166,35,0.10)",
+-                color: "var(--color-orange)",
+-            }}
+-        >
+-            PROCESSING
+-        </span>
+-    );
+-}
+-
+-export default function RightSidebar() {
+-    return (
+-        <aside className="w-[340px] min-w-[340px] h-full rounded-[18px] bg-white card-shadow flex flex-col overflow-hidden">
+-            {/* ── Header ── */}
+-            <div className="pt-6 pb-2 px-5">
+-                <h2
+-                    className="text-[20px] font-semibold tracking-[-0.4px]"
+-                    style={{ color: "var(--text-primary)" }}
+-                >
+-                    Knowledge Base
+-                </h2>
+-                <p className="text-[12.5px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>
+-                    8 files in 3 folders
+-                </p>
+-            </div>
+-
+-            {/* ── Search ── */}
+-            <div className="px-3 pt-1 pb-3">
+-                <div
+-                    className="h-[34px] rounded-[10px] flex items-center px-4"
+-                    style={{ background: "var(--bg-input)" }}
+-                >
+-                    <span className="text-[12.5px]" style={{ color: "var(--text-placeholder)" }}>
+-                        Search files and folders...
+-                    </span>
+-                </div>
+-            </div>
+-
+-            {/* ── File tree ── */}
+-            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 pb-3">
+-                {folders.map((folder, fi) => (
+-                    <div key={folder.name}>
+-                        {/* Folder row */}
+-                        <div className="flex items-center gap-2 py-2 cursor-pointer">
+-                            <span className="text-[17px]">{folder.icon}</span>
+-                            <span
+-                                className="text-[13px] font-medium flex-1"
+-                                style={{ color: "var(--text-primary)" }}
+-                            >
+-                                {folder.name}
+-                            </span>
+-                            <span
+-                                className="text-[11px] min-w-[22px] h-[18px] rounded-full flex items-center justify-center"
+-                                style={{ background: "var(--bg-input)", color: "var(--text-muted)" }}
+-                            >
+-                                {folder.count}
+-                            </span>
+-                            <span className="text-[11px]" style={{ color: "var(--text-placeholder)" }}>
+-                                {folder.expanded ? "▾" : "▸"}
+-                            </span>
+-                        </div>
+-
+-                        {/* Files */}
+-                        {folder.expanded &&
+-                            folder.files.map((file) => {
+-                                const fc = fileTypeColor(file.type);
+-                                return (
+-                                    <div
+-                                        key={file.name}
+-                                        className="flex items-center gap-2.5 pl-6 py-1.5 cursor-pointer"
+-                                    >
+-                                        {/* Type badge */}
+-                                        <div
+-                                            className="w-[24px] h-[24px] min-w-[24px] rounded-[5px] flex items-center justify-center"
+-                                            style={{ background: fc.bg }}
+-                                        >
+-                                            <span
+-                                                className="text-[8.5px] font-bold"
+-                                                style={{ color: fc.text }}
+-                                            >
+-                                                {file.type}
+-                                            </span>
+-                                        </div>
+-
+-                                        {/* Name + meta */}
+-                                        <div className="flex flex-col min-w-0 flex-1">
+-                                            <span
+-                                                className="text-xs truncate"
+-                                                style={{ color: "var(--text-primary)", fontWeight: 450 }}
+-                                            >
+-                                                {file.name}
+-                                            </span>
+-                                            <span className="text-[10.5px]" style={{ color: "var(--text-muted)" }}>
+-                                                {file.size} · {file.chunks}
+-                                            </span>
+-                                        </div>
+-
+-                                        {/* Status */}
+-                                        {statusBadge(file.status)}
+-                                    </div>
+-                                );
+-                            })}
+-
+-                        {/* Separator between folders */}
+-                        {fi < folders.length - 1 && (
+-                            <div
+-                                className="my-2"
+-                                style={{ borderTop: "1px solid var(--border-light)" }}
+-                            />
+-                        )}
+-                    </div>
+-                ))}
+-            </div>
+-
+-            {/* ── Upload zone ── */}
+-            <div className="px-3 pb-5 pt-2">
+-                <div
+-                    className="h-[40px] rounded-xl flex items-center justify-center cursor-pointer"
+-                    style={{
+-                        border: "1.5px dashed var(--border-dashed)",
+-                    }}
+-                >
+-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+-                        <span className="font-medium" style={{ color: "var(--color-primary)" }}>
+-                            Drop files
+-                        </span>{" "}
+-                        or click to upload
+-                    </span>
+-                </div>
+-            </div>
+-        </aside>
+-    );
+-}
+diff --git a/frontend/src/components/chat/ChatArea.tsx b/frontend/src/components/chat/ChatArea.tsx
+new file mode 100644
+index 0000000..b2e2025
+--- /dev/null
++++ b/frontend/src/components/chat/ChatArea.tsx
+@@ -0,0 +1,186 @@
++'use client';
++
++/** Center chat panel — messages, AI response with sources, and input bar. */
++export default function ChatArea() {
++    return (
++        <section
++            className="flex-1 min-w-0 h-full rounded-[18px] bg-card-bg card-shadow flex flex-col overflow-hidden"
++            aria-label="Chat conversation"
++        >
++            {/* ══════ Header ══════ */}
++            <header className="pt-6 pb-3 px-6 border-b border-border-light">
++                <h1 className="text-xl font-semibold tracking-tight text-text-primary">
++                    What is 2PC?
++                </h1>
++                <p className="text-[12.5px] mt-0.5 text-text-tertiary">
++                    Based on your distributed systems notes
++                </p>
++            </header>
++
++            {/* ══════ Messages ══════ */}
++            <div
++                className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 flex flex-col gap-5"
++                role="log"
++                aria-live="polite"
++            >
++                {/* ── User message ── */}
++                <div className="flex items-center justify-end gap-3">
++                    <div className="px-5 py-2.5 rounded-[20px] text-[15px] text-white bg-primary max-w-[80%]">
++                        What is Two-Phase Commit?
++                    </div>
++                    <div
++                        className="w-7 h-7 min-w-7 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E8E8ED] to-[#D1D1D6]"
++                        aria-hidden="true"
++                    >
++                        <span className="text-[10px] font-semibold text-text-tertiary">JD</span>
++                    </div>
++                </div>
++
++                {/* ── AI response ── */}
++                <article className="flex items-start gap-3">
++                    {/* Avatar */}
++                    <div
++                        className="w-7 h-7 min-w-7 rounded-full flex items-center justify-center mt-0.5 bg-gradient-to-br from-primary to-primary-dark"
++                        aria-hidden="true"
++                    >
++                        <span className="text-[10px] font-bold text-white">D</span>
++                    </div>
++
++                    {/* Content */}
++                    <div className="flex flex-col gap-4 text-[14.5px] tracking-tight leading-[22px] max-w-[90%] text-text-secondary">
++                        {/* Intro */}
++                        <p className="m-0">
++                            Two-Phase Commit (2PC) is a distributed protocol that ensures all nodes
++                            either <strong className="text-text-primary">commit</strong> or{' '}
++                            <strong className="text-text-primary">abort</strong> a transaction
++                            together. From your{' '}
++                            <span className="font-medium text-primary">Lecture 11</span> slides:
++                        </p>
++
++                        {/* Phase 1 */}
++                        <p className="m-0">
++                            <strong className="text-text-primary">Phase 1</strong> — the coordinator
++                            sends{' '}
++                            <code className="text-xs px-2 py-0.5 rounded font-mono bg-input-bg border border-border-light text-text-secondary">
++                                PREPARE
++                            </code>{' '}
++                            and each participant votes YES or NO.
++                        </p>
++
++                        {/* Phase 2 */}
++                        <p className="m-0">
++                            <strong className="text-text-primary">Phase 2</strong> — if all voted YES,
++                            broadcast{' '}
++                            <code className="text-xs px-2 py-0.5 rounded font-mono bg-input-bg border border-border-light text-text-secondary">
++                                COMMIT
++                            </code>{' '}
++                            ; otherwise{' '}
++                            <code className="text-xs px-2 py-0.5 rounded font-mono bg-input-bg border border-border-light text-text-secondary">
++                                ABORT
++                            </code>{' '}
++                            .
++                        </p>
++
++                        {/* Trade-off */}
++                        <p className="m-0">
++                            The key trade-off: 2PC guarantees atomicity but can <em>block</em> if the
++                            coordinator fails mid-protocol.
++                        </p>
++
++                        {/* ── Sources card ── */}
++                        <div className="rounded-xl overflow-hidden border border-border-medium">
++                            {/* Header */}
++                            <div className="px-5 py-2 bg-input-bg border-b border-border-light">
++                                <span className="text-[10.5px] font-semibold tracking-wider text-text-muted">
++                                    SOURCES
++                                </span>
++                            </div>
++
++                            {/* Source 1 */}
++                            <div className="flex items-center gap-3 px-5 py-2.5 border-b border-border-light">
++                                <span className="w-[22px] h-[22px] min-w-[22px] rounded-[5px] flex items-center justify-center bg-status-red/[0.08]">
++                                    <span className="text-[8.5px] font-bold text-status-red">PDF</span>
++                                </span>
++                                <span className="text-xs flex-1 truncate font-[450] text-text-secondary">
++                                    CS6650_Lecture11_2PC.pdf
++                                </span>
++                                <span className="text-[9.5px] px-2 py-0.5 rounded font-mono bg-input-bg text-text-muted">
++                                    slides 28-35
++                                </span>
++                            </div>
++
++                            {/* Source 2 */}
++                            <div className="flex items-center gap-3 px-5 py-2.5">
++                                <span className="w-[22px] h-[22px] min-w-[22px] rounded-[5px] flex items-center justify-center bg-primary/[0.07]">
++                                    <span className="text-[8.5px] font-bold text-primary">MD</span>
++                                </span>
++                                <span className="text-xs flex-1 truncate font-[450] text-text-secondary">
++                                    distributed_systems_notes.md
++                                </span>
++                                <span className="text-[9.5px] px-2 py-0.5 rounded font-mono bg-input-bg text-text-muted">
++                                    chunk 5
++                                </span>
++                            </div>
++                        </div>
++
++                        {/* ── Retrieval meta badges ── */}
++                        <div className="flex items-center gap-2">
++                            <span className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-primary/[0.07] text-primary">
++                                Knowledge Base
++                            </span>
++                            <span className="text-[11px] text-text-muted">2 docs · 1.2s</span>
++                        </div>
++                    </div>
++                </article>
++            </div>
++
++            {/* ══════ Input bar ══════ */}
++            <div className="px-6 pb-4 pt-2">
++                <form
++                    className="h-[42px] rounded-full flex items-center px-5 gap-2 bg-input-bg"
++                    onSubmit={(e) => e.preventDefault()}
++                    aria-label="Chat input"
++                >
++                    <label htmlFor="chat-input" className="sr-only">
++                        Ask a follow-up
++                    </label>
++                    <input
++                        id="chat-input"
++                        type="text"
++                        placeholder="Ask a follow-up..."
++                        className="flex-1 text-sm bg-transparent border-none outline-none text-text-primary placeholder:text-text-placeholder"
++                    />
++                    {/* Attach */}
++                    <button
++                        type="button"
++                        className="text-[15px] cursor-pointer bg-transparent border-none p-0 text-text-muted"
++                        aria-label="Attach file"
++                    >
++                        📎
++                    </button>
++                    {/* Camera */}
++                    <button
++                        type="button"
++                        className="text-[15px] cursor-pointer bg-transparent border-none p-0 text-text-muted"
++                        aria-label="Upload image"
++                    >
++                        📷
++                    </button>
++                    {/* Send */}
++                    <button
++                        type="submit"
++                        className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer border-none text-base font-semibold text-white bg-primary"
++                        aria-label="Send message"
++                    >
++                        ↑
++                    </button>
++                </form>
++
++                {/* Footer text */}
++                <p className="text-center text-[10.5px] mt-2 mb-0 text-text-placeholder">
++                    Gemini 2.5 Flash · 8 documents · 523 chunks
++                </p>
++            </div>
++        </section>
++    );
++}
+diff --git a/frontend/src/components/chat/ChatSidebar.tsx b/frontend/src/components/chat/ChatSidebar.tsx
+new file mode 100644
+index 0000000..a98fa18
+--- /dev/null
++++ b/frontend/src/components/chat/ChatSidebar.tsx
+@@ -0,0 +1,77 @@
++import type { ChatSession } from '@/types/chat';
++
++const SESSIONS: ChatSession[] = [
++    { id: 1, title: 'What is 2PC?', time: 'Just now', active: true },
++    { id: 2, title: 'Paxos vs Raft comparison', time: 'Yesterday', active: false },
++    { id: 3, title: 'RAG chunking strategies', time: 'Feb 22', active: false },
++    { id: 4, title: 'LangGraph agent design', time: 'Feb 20', active: false },
++    { id: 5, title: 'BM25 hybrid search', time: 'Feb 18', active: false },
++];
++
++/** Left sidebar — chat session list with "New Chat" button. */
++export default function ChatSidebar() {
++    return (
++        <aside className="w-[260px] min-w-[260px] h-full rounded-[18px] bg-card-bg card-shadow flex flex-col overflow-hidden">
++            {/* ── Header ── */}
++            <header className="pt-6 pb-2 px-5">
++                <h2 className="text-xl font-semibold tracking-tight text-text-primary">Chats</h2>
++                <p className="text-[12.5px] mt-0.5 text-text-tertiary">Your conversations</p>
++            </header>
++
++            {/* ── New Chat button ── */}
++            <div className="px-3 pt-1 pb-2">
++                <button
++                    className="w-full h-9 rounded-[10px] flex items-center justify-center gap-1 cursor-pointer border-none bg-input-bg"
++                    type="button"
++                    aria-label="Start a new chat"
++                >
++                    <span className="text-base font-light text-text-muted">+</span>
++                    <span className="text-[13px] font-medium text-text-secondary">New Chat</span>
++                </button>
++            </div>
++
++            {/* ── Session list ── */}
++            <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-4" aria-label="Chat history">
++                <ul className="list-none m-0 p-0">
++                    {SESSIONS.map((session) => (
++                        <li key={session.id}>
++                            <button
++                                type="button"
++                                className={`w-full flex items-center gap-3 rounded-[10px] px-3 py-2.5 mb-1 cursor-pointer border-none text-left transition-colors duration-150 ${session.active ? 'bg-primary' : 'bg-transparent hover:bg-input-bg'
++                                    }`}
++                                aria-current={session.active ? 'page' : undefined}
++                            >
++                                {/* Icon */}
++                                <span
++                                    className={`w-7 h-7 min-w-7 rounded-full flex items-center justify-center text-xs ${session.active
++                                            ? 'bg-white/20 text-white/90'
++                                            : 'bg-input-bg text-text-tertiary'
++                                        }`}
++                                    aria-hidden="true"
++                                >
++                                    💬
++                                </span>
++
++                                {/* Text */}
++                                <span className="flex flex-col min-w-0">
++                                    <span
++                                        className={`text-[13px] font-medium truncate ${session.active ? 'text-white' : 'text-text-primary'
++                                            }`}
++                                    >
++                                        {session.title}
++                                    </span>
++                                    <span
++                                        className={`text-[11px] ${session.active ? 'text-white/65' : 'text-text-muted'
++                                            }`}
++                                    >
++                                        {session.time}
++                                    </span>
++                                </span>
++                            </button>
++                        </li>
++                    ))}
++                </ul>
++            </nav>
++        </aside>
++    );
++}
+diff --git a/frontend/src/components/documents/KnowledgeBase.tsx b/frontend/src/components/documents/KnowledgeBase.tsx
+new file mode 100644
+index 0000000..bde5e73
+--- /dev/null
++++ b/frontend/src/components/documents/KnowledgeBase.tsx
+@@ -0,0 +1,175 @@
++import type { FileItem, Folder } from '@/types/document';
++
++const FOLDERS: Folder[] = [
++    {
++        name: 'Distributed Systems',
++        icon: '📂',
++        count: 4,
++        expanded: true,
++        files: [
++            { name: 'CS6650_Lecture11_2PC.pdf', size: '2.4 MB', chunks: '42 chunks', type: 'PDF', status: 'READY' },
++            { name: 'CS6650_Lecture12_3PC.pdf', size: '2.1 MB', chunks: '38 chunks', type: 'PDF', status: 'READY' },
++            { name: 'Raft_Consensus.pdf', size: '1.2 MB', chunks: '51 chunks', type: 'PDF', status: 'READY' },
++            { name: 'distributed_systems_note...', size: '89 KB', chunks: '24 chunks', type: 'MD', status: 'READY' },
++        ],
++    },
++    {
++        name: 'AI / Machine Learning',
++        icon: '📂',
++        count: 3,
++        expanded: true,
++        files: [
++            { name: 'CS7180_RAG_Survey.pdf', size: '3.1 MB', chunks: '93 chunks', type: 'PDF', status: 'READY' },
++            { name: 'Attention_Is_All_You_Nee...', size: '1.8 MB', chunks: '67 chunks', type: 'PDF', status: 'READY' },
++            { name: 'ml_study_notes.txt', size: '34 KB', chunks: '12 chunks', type: 'TXT', status: 'PROCESSING' },
++        ],
++    },
++    {
++        name: 'Project Docs',
++        icon: '📁',
++        count: 1,
++        expanded: false,
++        files: [],
++    },
++];
++
++/** Returns Tailwind classes for a file type badge. */
++function fileTypeBadgeClasses(type: FileItem['type']): { bg: string; text: string } {
++    switch (type) {
++        case 'PDF':
++            return { bg: 'bg-status-red/[0.08]', text: 'text-status-red' };
++        case 'MD':
++            return { bg: 'bg-primary/[0.07]', text: 'text-primary' };
++        case 'TXT':
++            return { bg: 'bg-status-orange/10', text: 'text-status-orange' };
++    }
++}
++
++/** Renders a status badge for a file item. */
++function StatusBadge({ status }: { status: FileItem['status'] }) {
++    if (status === 'READY') {
++        return (
++            <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-status-green/10 text-status-green">
++                READY
++            </span>
++        );
++    }
++    return (
++        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-status-orange/10 text-status-orange">
++            PROCESSING
++        </span>
++    );
++}
++
++/** Right sidebar — knowledge base file explorer with folder tree and upload zone. */
++export default function KnowledgeBase() {
++    return (
++        <aside
++            className="w-[340px] min-w-[340px] h-full rounded-[18px] bg-card-bg card-shadow flex flex-col overflow-hidden"
++            aria-label="Knowledge base"
++        >
++            {/* ── Header ── */}
++            <header className="pt-6 pb-2 px-5">
++                <h2 className="text-xl font-semibold tracking-tight text-text-primary">
++                    Knowledge Base
++                </h2>
++                <p className="text-[12.5px] mt-0.5 text-text-tertiary">8 files in 3 folders</p>
++            </header>
++
++            {/* ── Search ── */}
++            <div className="px-3 pt-1 pb-3">
++                <label htmlFor="kb-search" className="sr-only">
++                    Search files and folders
++                </label>
++                <input
++                    id="kb-search"
++                    type="search"
++                    placeholder="Search files and folders..."
++                    className="w-full h-[34px] rounded-[10px] px-4 text-[12.5px] bg-input-bg border-none outline-none text-text-primary placeholder:text-text-placeholder"
++                />
++            </div>
++
++            {/* ── File tree ── */}
++            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 pb-3" role="tree">
++                {FOLDERS.map((folder, fi) => (
++                    <div key={folder.name} role="treeitem" aria-expanded={folder.expanded}>
++                        {/* Folder row */}
++                        <button
++                            type="button"
++                            className="w-full flex items-center gap-2 py-2 cursor-pointer bg-transparent border-none text-left"
++                            aria-label={`${folder.name} folder, ${folder.count} files`}
++                        >
++                            <span className="text-[17px]" aria-hidden="true">{folder.icon}</span>
++                            <span className="text-[13px] font-medium flex-1 text-text-primary">
++                                {folder.name}
++                            </span>
++                            <span className="text-[11px] min-w-[22px] h-[18px] rounded-full flex items-center justify-center bg-input-bg text-text-muted">
++                                {folder.count}
++                            </span>
++                            <span className="text-[11px] text-text-placeholder" aria-hidden="true">
++                                {folder.expanded ? '▾' : '▸'}
++                            </span>
++                        </button>
++
++                        {/* Files */}
++                        {folder.expanded && (
++                            <ul className="list-none m-0 p-0" role="group">
++                                {folder.files.map((file) => {
++                                    const badge = fileTypeBadgeClasses(file.type);
++                                    return (
++                                        <li
++                                            key={file.name}
++                                            className="flex items-center gap-2.5 pl-6 py-1.5 cursor-pointer"
++                                            role="treeitem"
++                                        >
++                                            {/* Type badge */}
++                                            <span
++                                                className={`w-6 h-6 min-w-6 rounded-[5px] flex items-center justify-center ${badge.bg}`}
++                                            >
++                                                <span className={`text-[8.5px] font-bold ${badge.text}`}>
++                                                    {file.type}
++                                                </span>
++                                            </span>
++
++                                            {/* Name + meta */}
++                                            <span className="flex flex-col min-w-0 flex-1">
++                                                <span className="text-xs truncate font-[450] text-text-primary">
++                                                    {file.name}
++                                                </span>
++                                                <span className="text-[10.5px] text-text-muted">
++                                                    {file.size} · {file.chunks}
++                                                </span>
++                                            </span>
++
++                                            {/* Status */}
++                                            <StatusBadge status={file.status} />
++                                        </li>
++                                    );
++                                })}
++                            </ul>
++                        )}
++
++                        {/* Separator between folders */}
++                        {fi < FOLDERS.length - 1 && (
++                            <hr className="my-2 border-t border-border-light" />
++                        )}
++                    </div>
++                ))}
++            </div>
++
++            {/* ── Upload zone ── */}
++            <div className="px-3 pb-5 pt-2">
++                <button
++                    type="button"
++                    className="w-full h-10 rounded-xl flex items-center justify-center cursor-pointer bg-transparent border-[1.5px] border-dashed border-border-dashed"
++                    aria-label="Upload documents"
++                >
++                    <span className="text-xs text-text-muted">
++                        <span className="font-medium text-primary">Drop files</span> or click to
++                        upload
++                    </span>
++                </button>
++            </div>
++        </aside>
++    );
++}
+diff --git a/frontend/src/components/ui/Navbar.tsx b/frontend/src/components/ui/Navbar.tsx
+new file mode 100644
+index 0000000..29953f8
+--- /dev/null
++++ b/frontend/src/components/ui/Navbar.tsx
+@@ -0,0 +1,63 @@
++/** Top navigation bar — logo, links, status pills, user avatar. */
++export default function Navbar() {
++    return (
++        <nav
++            className="fixed top-0 left-0 w-full h-11 z-50 flex items-center px-6 bg-nav-bg"
++            aria-label="Main navigation"
++        >
++            {/* ── Logo ── */}
++            <div className="flex items-center gap-2.5">
++                <div className="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center bg-gradient-to-br from-primary to-primary-dark">
++                    <span className="text-white text-sm font-bold leading-none">D</span>
++                </div>
++                <span className="text-[15px] font-semibold tracking-tight text-nav-text">
++                    DocMind
++                </span>
++            </div>
++
++            {/* ── Nav links ── */}
++            <div className="flex items-center gap-6 ml-10" role="menubar">
++                <span className="text-xs font-medium text-nav-text" role="menuitem" tabIndex={0}>
++                    Chat
++                </span>
++                <span className="text-xs text-nav-text-dim" role="menuitem" tabIndex={0}>
++                    Documents
++                </span>
++                <span className="text-xs text-nav-text-dim" role="menuitem" tabIndex={0}>
++                    Evaluation
++                </span>
++                <span className="text-xs text-nav-text-dim" role="menuitem" tabIndex={0}>
++                    Settings
++                </span>
++            </div>
++
++            {/* ── Spacer ── */}
++            <div className="flex-1" />
++
++            {/* ── Right-side indicators ── */}
++            <div className="flex items-center gap-3">
++                {/* Doc count pill */}
++                <div className="h-[22px] px-3 rounded-full flex items-center gap-2 bg-white/10 border border-white/[0.08]">
++                    <span className="w-1.5 h-1.5 rounded-full bg-status-green" aria-hidden="true" />
++                    <span className="text-[11px] font-medium text-white/80">8 docs</span>
++                </div>
++
++                {/* Model badge */}
++                <div className="h-[22px] px-3 rounded-full flex items-center bg-primary/15">
++                    <span className="text-[11px] font-medium font-mono text-blue-accent">
++                        gemini-2.5-flash
++                    </span>
++                </div>
++
++                {/* User avatar */}
++                <button
++                    className="w-[26px] h-[26px] rounded-full flex items-center justify-center bg-white/15 border-none cursor-pointer"
++                    aria-label="User menu"
++                    type="button"
++                >
++                    <span className="text-[10px] font-semibold text-white/80">JD</span>
++                </button>
++            </div>
++        </nav>
++    );
++}
+diff --git a/frontend/src/types/chat.ts b/frontend/src/types/chat.ts
+new file mode 100644
+index 0000000..c362c93
+--- /dev/null
++++ b/frontend/src/types/chat.ts
+@@ -0,0 +1,22 @@
++/** Chat session displayed in the left sidebar. */
++export interface ChatSession {
++    id: number;
++    title: string;
++    time: string;
++    active: boolean;
++}
++
++/** A source citation returned by the RAG pipeline. */
++export interface Source {
++    name: string;
++    type: 'PDF' | 'MD' | 'TXT';
++    location: string;
++}
++
++/** A single chat message (user or assistant). */
++export interface ChatMessage {
++    id: string;
++    role: 'user' | 'assistant';
++    content: string;
++    sources?: Source[];
++}
+diff --git a/frontend/src/types/document.ts b/frontend/src/types/document.ts
+new file mode 100644
+index 0000000..3f659d8
+--- /dev/null
++++ b/frontend/src/types/document.ts
+@@ -0,0 +1,23 @@
++/** Processing status for an uploaded document. */
++export type DocumentStatus = 'READY' | 'PROCESSING' | 'PENDING' | 'FAILED';
++
++/** Supported document file types. */
++export type FileType = 'PDF' | 'MD' | 'TXT';
++
++/** A single file in the knowledge base. */
++export interface FileItem {
++    name: string;
++    size: string;
++    chunks: string;
++    type: FileType;
++    status: DocumentStatus;
++}
++
++/** A folder grouping files in the knowledge base. */
++export interface Folder {
++    name: string;
++    icon: string;
++    count: number;
++    expanded: boolean;
++    files: FileItem[];
++}
