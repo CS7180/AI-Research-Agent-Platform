@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* ── Primary / Brand ── */
+  --color-primary: #0071E3;
+  --color-primary-gradient-end: #5E5CE6;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* ── Surfaces ── */
+  --color-surface: #F5F5F7;
+  --color-surface-card: #FFFFFF;
+  --color-nav-bg: rgba(29, 29, 31, 0.85);
+  --color-nav-bg-end: rgba(29, 29, 31, 0.78);
+
+  /* ── Text ── */
+  --color-text-primary: #1D1D1F;
+  --color-text-secondary: #424245;
+  --color-text-tertiary: #86868B;
+  --color-text-quaternary: #AEAEB2;
+  --color-text-placeholder: #D2D2D7;
+  --color-text-nav: #F5F5F7;
+  --color-text-nav-muted: rgba(245, 245, 247, 0.7);
+  --color-text-nav-semi: rgba(245, 245, 247, 0.8);
+
+  /* ── Borders / Separators ── */
+  --color-border-light: rgba(0, 0, 0, 0.06);
+  --color-border-medium: rgba(0, 0, 0, 0.08);
+  --color-border-dashed: rgba(0, 0, 0, 0.10);
+
+  /* ── File-Type Badges ── */
+  --color-badge-pdf: #FF3B30;
+  --color-badge-pdf-bg: rgba(255, 59, 48, 0.08);
+  --color-badge-md: #0071E3;
+  --color-badge-md-bg: rgba(0, 113, 227, 0.07);
+  --color-badge-txt: #F5A623;
+  --color-badge-txt-bg: rgba(245, 166, 35, 0.10);
+
+  /* ── Status ── */
+  --color-status-ready: #2DC653;
+  --color-status-ready-bg: rgba(45, 198, 83, 0.10);
+  --color-status-processing: #F5A623;
+  --color-status-processing-bg: rgba(245, 166, 35, 0.10);
+
+  /* ── Nav pills ── */
+  --color-pill-bg: rgba(255, 255, 255, 0.1);
+  --color-pill-border: rgba(255, 255, 255, 0.08);
+  --color-pill-model-bg: rgba(0, 113, 227, 0.15);
+  --color-pill-model-text: #64B5F6;
+  --color-avatar-nav-bg: rgba(255, 255, 255, 0.15);
+
+  /* ── Interactive ── */
+  --color-active-session-icon: rgba(255, 255, 255, 0.2);
+  --color-active-session-sub: rgba(255, 255, 255, 0.65);
+  --color-human-avatar-start: #E8E8ED;
+  --color-human-avatar-end: #D1D1D6;
+  --color-source-kb-bg: rgba(0, 113, 227, 0.07);
+
+  /* ── Fonts ── */
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-mono: 'Menlo', monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
 }
