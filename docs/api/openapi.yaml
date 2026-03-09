@@ -1,0 +1,567 @@
+openapi: 3.1.0
+
+info:
+  title: DocMind API
+  version: "1.0.0"
+  description: |
+    **DocMind** is an AI-powered research agent platform for CS students.
+    Users upload documents to build a private knowledge base, then query it
+    via text and image inputs through an intelligent LangGraph agent that
+    orchestrates retrieval, web search, and code execution.
+
+    ## Authentication
+    All endpoints except `GET /health` require a valid Supabase-issued JWT
+    passed as a **Bearer token** in the `Authorization` header.
+
+    ```
+    Authorization: Bearer <supabase-jwt>
+    ```
+
+    Tokens are obtained via Supabase Auth (Google OAuth on the frontend).
+    Row Level Security (RLS) is enforced at the database level — each user
+    can only access their own documents.
+
+    ## Streaming (SSE)
+    `POST /api/chat` streams the agent's answer as **Server-Sent Events**.
+    Each event is a JSON-encoded chunk. A final `[DONE]` event signals
+    end-of-stream.
+
+    ## Base URL
+    | Environment | URL |
+    |---|---|
+    | Local development | `http://localhost:8000` |
+    | Production | TBD |
+
+  contact:
+    name: DocMind Backend
+    email: li.shans@northeastern.edu
+
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.docmind.app
+    description: Production server (TBD)
+
+tags:
+  - name: health
+    description: Liveness and readiness checks — no authentication required.
+  - name: documents
+    description: |
+      Document lifecycle management.
+      Files are stored in Supabase Storage; text extraction, chunking, and
+      embedding are handled by an async Celery worker after upload.
+  - name: chat
+    description: |
+      AI query interface backed by the LangGraph agent.
+      Accepts text + optional image input and streams the answer via SSE.
+
+# ── Security Scheme ──────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Supabase-issued JWT token. Obtain via Supabase Auth (Google OAuth).
+        Frontend should store the token from `supabase.auth.getSession()` and
+        include it as `Authorization: Bearer <token>` on every request.
+
+  # ── Reusable Schemas ──────────────────────────────────────────────────────
+  schemas:
+
+    # --- Document -----------------------------------------------------------
+    DocumentStatus:
+      type: string
+      enum: [PENDING, PROCESSING, READY, FAILED]
+      description: |
+        Lifecycle state of a document in the processing pipeline.
+        - `PENDING` — uploaded, waiting for the Celery worker to pick it up.
+        - `PROCESSING` — text extraction / chunking / embedding in progress.
+        - `READY` — fully indexed and searchable.
+        - `FAILED` — processing failed after max retries (see `error_message`).
+
+    DocumentResponse:
+      type: object
+      required: [id, user_id, filename, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique document identifier.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        user_id:
+          type: string
+          format: uuid
+          description: Supabase Auth UID of the document owner.
+          example: "auth-uid-abc123"
+        filename:
+          type: string
+          description: Original filename as uploaded.
+          example: "lecture-notes-week3.pdf"
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        created_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of upload.
+          example: "2026-03-09T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of last status update.
+          example: "2026-03-09T12:00:45Z"
+        error_message:
+          type: string
+          nullable: true
+          description: >
+            Present only when `status == FAILED`. Human-readable reason
+            for the processing failure.
+          example: null
+
+    DocumentListResponse:
+      type: object
+      required: [documents, total]
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
+        total:
+          type: integer
+          description: Total number of documents owned by this user.
+          example: 12
+
+    DeleteDocumentResponse:
+      type: object
+      required: [id, message]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the deleted document.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        message:
+          type: string
+          example: "Document deleted successfully."
+
+    # --- Chat ---------------------------------------------------------------
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: The user's natural language query.
+          example: "Summarize how 2PC handles node failure from my lecture notes."
+        image_base64:
+          type: string
+          nullable: true
+          description: >
+            Optional base64-encoded image (e.g. whiteboard photo) for
+            multi-modal queries. The image is passed directly to Gemini 2.5
+            Flash's built-in vision capability.
+          example: null
+        conversation_id:
+          type: string
+          nullable: true
+          description: >
+            Existing conversation UUID to continue a multi-turn session.
+            Omit (or pass `null`) to start a new conversation.
+          example: "conv-uuid-xyz789"
+
+    CitationSource:
+      type: object
+      required: [document_id, filename, chunk_index, excerpt]
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Source document ID.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        filename:
+          type: string
+          description: Human-readable filename of the source document.
+          example: "distributed-systems-slides.pdf"
+        chunk_index:
+          type: integer
+          description: Zero-based index of the retrieved chunk within the document.
+          example: 7
+        excerpt:
+          type: string
+          description: Short text excerpt from the source chunk shown to the user.
+          example: "Two-phase commit (2PC) uses a coordinator that..."
+
+    ChatResponse:
+      type: object
+      description: >
+        Non-streaming response payload. In practice the chat endpoint uses SSE
+        streaming; this schema describes the final summary payload and is also
+        used for error responses.
+      required: [conversation_id, answer]
+      properties:
+        conversation_id:
+          type: string
+          description: The conversation UUID (new or continued).
+          example: "conv-uuid-xyz789"
+        answer:
+          type: string
+          description: Full answer text generated by the LangGraph agent.
+          example: "According to your lecture notes, 2PC handles node failure by..."
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/CitationSource"
+          description: Source documents cited by the agent.
+          default: []
+
+    # --- SSE Event ----------------------------------------------------------
+    SSEChunk:
+      type: object
+      description: |
+        A single Server-Sent Event emitted during a streaming chat response.
+
+        **Event format over the wire:**
+        ```
+        data: {"type":"token","content":"According"}\n\n
+        data: {"type":"token","content":" to"}\n\n
+        ...
+        data: {"type":"sources","sources":[...]}\n\n
+        data: [DONE]\n\n
+        ```
+      properties:
+        type:
+          type: string
+          enum: [token, sources, error]
+          description: |
+            - `token` — incremental text chunk of the answer.
+            - `sources` — citation metadata sent after the last token.
+            - `error` — an error occurred; streaming stops.
+        content:
+          type: string
+          nullable: true
+          description: Text content for `token` events.
+          example: "According to your lecture notes,"
+        sources:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/CitationSource"
+          description: Array of citations, present only for `sources` events.
+
+    # --- Errors -------------------------------------------------------------
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: Human-readable error explanation.
+          example: "Unsupported file type: application/zip. Allowed: PDF, Markdown, TXT."
+
+# ── Global Security ──────────────────────────────────────────────────────────
+security:
+  - BearerAuth: []
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+paths:
+
+  /health:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: >
+        Returns `{"status": "ok"}` when the API is running. No authentication
+        required. Use this for load-balancer / container health probes.
+      security: []   # override — no auth needed
+      responses:
+        "200":
+          description: API is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+              example:
+                status: "ok"
+
+  /api/documents/upload:
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      summary: Upload a document for processing
+      description: |
+        Accepts a file upload, validates MIME type and size, stores the file
+        in Supabase Storage, and dispatches an async Celery task for text
+        extraction, chunking, and embedding.
+
+        **Supported formats:** PDF (`application/pdf`), Markdown (`text/markdown`),
+        Plain text (`text/plain`).
+
+        **Size limit:** 50 MB.
+
+        The response is returned immediately with `status: PENDING`.
+        Poll `GET /api/documents` to check when processing completes.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF, Markdown, or TXT file. Maximum 50 MB.
+      responses:
+        "202":
+          description: Document accepted and queued for processing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+              example:
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                user_id: "auth-uid-abc123"
+                filename: "lecture-notes-week3.pdf"
+                status: "PENDING"
+                created_at: "2026-03-09T12:00:00Z"
+                updated_at: "2026-03-09T12:00:00Z"
+                error_message: null
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Not authenticated"
+        "413":
+          description: File exceeds the 50 MB size limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "File exceeds 50MB limit."
+        "415":
+          description: Unsupported file type.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Unsupported file type: application/zip. Allowed: PDF, Markdown, TXT."
+
+  /api/documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List all documents for the current user
+      description: |
+        Returns all documents owned by the authenticated user, ordered by
+        upload date (newest first). Row Level Security in Supabase ensures
+        users can only see their own data.
+      responses:
+        "200":
+          description: List of documents returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+              example:
+                total: 2
+                documents:
+                  - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    user_id: "auth-uid-abc123"
+                    filename: "lecture-notes-week3.pdf"
+                    status: "READY"
+                    created_at: "2026-03-09T12:00:00Z"
+                    updated_at: "2026-03-09T12:00:45Z"
+                    error_message: null
+                  - id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                    user_id: "auth-uid-abc123"
+                    filename: "research-paper.pdf"
+                    status: "PROCESSING"
+                    created_at: "2026-03-09T13:00:00Z"
+                    updated_at: "2026-03-09T13:00:05Z"
+                    error_message: null
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/documents/{document_id}:
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document and its associated vectors
+      description: |
+        Deletes a document from:
+        1. **Supabase Storage** (raw file object)
+        2. **Supabase DB** (`documents` table row)
+        3. **pgvector store** (all embedding chunks associated with the document)
+
+        Only the document owner can delete their own documents (enforced by RLS).
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document to delete.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        "200":
+          description: Document deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteDocumentResponse"
+              example:
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                message: "Document deleted successfully."
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Document belongs to a different user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Access denied."
+        "404":
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Document not found."
+
+  /api/chat:
+    post:
+      operationId: chat
+      tags: [chat]
+      summary: Send a query and receive a streamed agent response (SSE)
+      description: |
+        Accepts a natural language query (with optional base64 image for
+        multi-modal input), runs it through the LangGraph agent, and streams
+        the response as **Server-Sent Events**.
+
+        ## Streaming Protocol
+        Set `Accept: text/event-stream` to consume the SSE stream.
+        Each event is a JSON object on a `data:` line:
+
+        ```
+        data: {"type":"token","content":"According "}\n\n
+        data: {"type":"token","content":"to your notes,"}\n\n
+        data: {"type":"sources","sources":[{"document_id":"...","filename":"..."}]}\n\n
+        data: [DONE]\n\n
+        ```
+
+        | Event type | When | Payload |
+        |---|---|---|
+        | `token` | Every incremental text chunk | `content: string` |
+        | `sources` | After last token | `sources: CitationSource[]` |
+        | `error` | On agent failure | `content: string` (error message) |
+        | `[DONE]` | Stream complete | Literal string; close the connection |
+
+        ## Agent Tool Selection
+        The LangGraph agent autonomously selects one or more tools per query:
+        - **KB Retrieval** (hybrid BM25 + semantic, re-ranked) — used when the answer is likely in uploaded documents.
+        - **Web Search** — fallback when KB retrieval yields low confidence.
+        - **Code Execution** — used for computational queries.
+
+        ## Multi-Modal Input
+        Pass `image_base64` alongside `message` to send a whiteboard photo or
+        diagram. Gemini 2.5 Flash processes both inputs together.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            examples:
+              text_only:
+                summary: Text-only query
+                value:
+                  message: "How does 2PC handle node failure?"
+                  conversation_id: null
+                  image_base64: null
+              multi_turn:
+                summary: Continue an existing conversation
+                value:
+                  message: "Can you give a concrete example?"
+                  conversation_id: "conv-uuid-xyz789"
+                  image_base64: null
+              multimodal:
+                summary: Query with an image
+                value:
+                  message: "Explain this diagram using my lecture notes."
+                  conversation_id: null
+                  image_base64: "iVBORw0KGgoAAAANSUhEUgAA..."
+      responses:
+        "200":
+          description: |
+            SSE stream opened successfully. Consume the `text/event-stream`
+            response as described in the endpoint description above.
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: "text/event-stream"
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-cache"
+            X-Accel-Buffering:
+              schema:
+                type: string
+                example: "no"
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/SSEChunk"
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Request body validation error (e.g. message too long).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "message: ensure this value has at most 4096 characters"
+        "501":
+          description: >
+            Chat agent not yet implemented (sprint backlog Issues #5, #8).
+            This response will be removed when the LangGraph agent is wired up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Chat agent not yet implemented (Issues #5, #8)."

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocMind API Documentation</title>
+  <meta name="description" content="DocMind REST API reference — backend/frontend collaboration documentation for the AI Research Agent Platform." />
+
+  <!-- Swagger UI -->
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+
+  <style>
+    /* ── Custom Design System ────────────────────────────────────────── */
+    :root {
+      --primary:      #6c63ff;
+      --primary-dark: #4a40e0;
+      --accent:       #00d4aa;
+      --bg:           #0d0f1a;
+      --surface:      #161929;
+      --surface2:     #1e2235;
+      --border:       #2a2f4a;
+      --text:         #e2e8f0;
+      --text-muted:   #8892b0;
+      --danger:       #ff5c7a;
+      --warning:      #f0c040;
+      --success:      #00d4aa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: linear-gradient(135deg, #0d0f1a 0%, #161929 50%, #0d1f3a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 40px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+
+    .logo-icon {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 20px rgba(108,99,255,0.4);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(108,99,255,0.3); }
+      50%       { box-shadow: 0 4px 32px rgba(108,99,255,0.6); }
+    }
+
+    .site-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .site-title span { color: var(--accent); }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-version { background: rgba(108,99,255,0.2); color: var(--primary); border: 1px solid rgba(108,99,255,0.4); }
+    .badge-oas     { background: rgba(0,212,170,0.15); color: var(--accent);   border: 1px solid rgba(0,212,170,0.3); }
+    .badge-fastapi { background: rgba(0,212,170,0.1);  color: #09d261;         border: 1px solid rgba(9,210,97,0.3); }
+
+    /* ── Info Strip ── */
+    .info-strip {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+    }
+    .info-strip-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+    .info-item strong { color: var(--text); font-weight: 600; }
+    .info-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* ── Auth note ── */
+    .auth-callout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 40px;
+    }
+    .auth-box {
+      background: linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,212,170,0.05));
+      border: 1px solid rgba(108,99,255,0.3);
+      border-radius: 14px;
+      padding: 18px 24px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .auth-icon { font-size: 22px; margin-top: 2px; }
+    .auth-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--primary); }
+    .auth-box p  { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .auth-box code {
+      background: rgba(108,99,255,0.15);
+      color: #a89bff;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+    }
+
+    /* ── Swagger UI overrides ── */
+    #swagger-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 40px 60px;
+    }
+
+    .swagger-ui { background: transparent !important; }
+
+    /* Topbar hide */
+    .swagger-ui .topbar { display: none !important; }
+
+    /* Info section */
+    .swagger-ui .info { margin: 0 0 20px !important; }
+    .swagger-ui .info .title { color: var(--text) !important; font-size: 26px !important; }
+    .swagger-ui .info .description p { color: var(--text-muted) !important; }
+    .swagger-ui .info .description code { background: var(--surface2) !important; color: var(--accent) !important; border-radius: 4px; padding: 1px 6px; }
+
+    /* Server selector */
+    .swagger-ui .scheme-container {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 12px !important;
+      padding: 16px !important;
+      margin-bottom: 24px !important;
+    }
+    .swagger-ui .servers > label { color: var(--text-muted) !important; font-size: 12px !important; }
+    .swagger-ui .servers select {
+      background: var(--surface2) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 8px !important;
+      padding: 6px 10px !important;
+    }
+
+    /* Operations */
+    .swagger-ui .opblock {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 12px !important;
+      margin-bottom: 10px !important;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2) !important;
+      transition: box-shadow 0.2s ease;
+    }
+    .swagger-ui .opblock:hover { box-shadow: 0 4px 24px rgba(108,99,255,0.15) !important; }
+
+    .swagger-ui .opblock .opblock-summary { border-radius: 12px !important; }
+    .swagger-ui .opblock .opblock-summary:hover { background: rgba(255,255,255,0.03) !important; }
+
+    .swagger-ui .opblock-summary-method {
+      border-radius: 8px !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      min-width: 70px !important;
+    }
+
+    /* Method colours */
+    .swagger-ui .opblock.opblock-get    { border-color: rgba(0,212,170,0.3)   !important; background: rgba(0,212,170,0.03)   !important; }
+    .swagger-ui .opblock.opblock-post   { border-color: rgba(108,99,255,0.3)  !important; background: rgba(108,99,255,0.03)  !important; }
+    .swagger-ui .opblock.opblock-delete { border-color: rgba(255,92,122,0.3)  !important; background: rgba(255,92,122,0.03)  !important; }
+
+    .swagger-ui .opblock.opblock-get    .opblock-summary-method { background: #00d4aa !important; }
+    .swagger-ui .opblock.opblock-post   .opblock-summary-method { background: var(--primary) !important; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: var(--danger) !important; }
+
+    /* Expanded body */
+    .swagger-ui .opblock-body { background: var(--surface2) !important; border-radius: 0 0 12px 12px !important; }
+
+    /* Tags */
+    .swagger-ui .opblock-tag {
+      color: var(--text) !important;
+      border-bottom: 1px solid var(--border) !important;
+      font-size: 18px !important;
+      font-weight: 700 !important;
+      padding: 20px 0 12px !important;
+    }
+    .swagger-ui .opblock-tag small { color: var(--text-muted) !important; font-size: 13px !important; font-weight: 400 !important; }
+
+    /* Parameters / response tables */
+    .swagger-ui table.headers td,
+    .swagger-ui table.headers th,
+    .swagger-ui .parameters-col_description,
+    .swagger-ui .parameter__name,
+    .swagger-ui .parameter__type,
+    .swagger-ui .prop-type,
+    .swagger-ui .prop-format { color: var(--text) !important; }
+
+    .swagger-ui .response-col_status { color: var(--text) !important; }
+    .swagger-ui .response-col_description { color: var(--text-muted) !important; }
+
+    .swagger-ui .model-box,
+    .swagger-ui .model { background: var(--surface) !important; border-radius: 8px !important; }
+
+    .swagger-ui section.models {
+      background: var(--surface)  !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 12px !important;
+    }
+    .swagger-ui section.models h4 { color: var(--text) !important; }
+
+    /* Buttons */
+    .swagger-ui .btn {
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      transition: all 0.2s ease !important;
+    }
+    .swagger-ui .btn.execute {
+      background: var(--primary) !important;
+      border-color: var(--primary) !important;
+    }
+    .swagger-ui .btn.execute:hover { background: var(--primary-dark) !important; }
+
+    .swagger-ui .btn.authorize {
+      background: transparent !important;
+      border: 1px solid var(--accent) !important;
+      color: var(--accent) !important;
+    }
+    .swagger-ui .btn.authorize:hover { background: rgba(0,212,170,0.1) !important; }
+
+    /* Input fields */
+    .swagger-ui input[type=text],
+    .swagger-ui select,
+    .swagger-ui textarea {
+      background: var(--bg) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 8px !important;
+    }
+
+    /* Code/pre */
+    .swagger-ui .highlight-code > pre,
+    .swagger-ui .response-col_description pre {
+      background: #0a0c17 !important;
+      border-radius: 8px !important;
+      color: #a8b4d8 !important;
+    }
+
+    /* Auth modal */
+    .swagger-ui .dialog-ux .modal-ux {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px !important;
+    }
+    .swagger-ui .dialog-ux .modal-ux-header { background: var(--surface) !important; border-bottom: 1px solid var(--border) !important; }
+    .swagger-ui .dialog-ux .modal-ux-header h3 { color: var(--text) !important; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    /* ── Footer ── */
+    .site-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .site-footer a { color: var(--primary); text-decoration: none; }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-area">
+        <div class="logo-icon">🧠</div>
+        <div>
+          <div class="site-title">Doc<span>Mind</span> API</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">AI Research Agent Platform</div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge badge-version">v1.0.0</span>
+        <span class="badge badge-oas">OpenAPI 3.1</span>
+        <span class="badge badge-fastapi">FastAPI</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Status Strip ─────────────────────────────────────────── -->
+  <div class="info-strip">
+    <div class="info-strip-inner">
+      <div class="info-item">
+        <div class="info-dot"></div>
+        <strong>Base URL:</strong> http://localhost:8000
+      </div>
+      <div class="info-item">🔐 <strong>Auth:</strong> Supabase JWT (Bearer)</div>
+      <div class="info-item">📡 <strong>Streaming:</strong> Server-Sent Events (SSE)</div>
+      <div class="info-item">🗄️ <strong>Database:</strong> Supabase (PostgreSQL + pgvector)</div>
+      <div class="info-item">⚙️ <strong>Worker:</strong> Redis + Celery</div>
+    </div>
+  </div>
+
+  <!-- ── Auth Callout ─────────────────────────────────────────── -->
+  <div class="auth-callout">
+    <div class="auth-box">
+      <div class="auth-icon">🔑</div>
+      <div>
+        <h3>Authentication Required</h3>
+        <p>
+          All endpoints (except <code>GET /health</code>) require a valid Supabase JWT.
+          On the frontend, call <code>supabase.auth.getSession()</code> after Google OAuth
+          and include the token as <code>Authorization: Bearer &lt;token&gt;</code> on every request.
+          Click <strong>Authorize</strong> in the Swagger UI below to set your token for live testing.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Swagger UI ───────────────────────────────────────────── -->
+  <div id="swagger-container">
+    <div id="swagger-ui"></div>
+  </div>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    DocMind · Team: Shanshou Li (Backend) &amp; Yachen Wang (Frontend) ·
+    <a href="openapi.yaml" download>Download OpenAPI YAML</a>
+  </footer>
+
+  <!-- ── Scripts ──────────────────────────────────────────────── -->
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function () {
+      const ui = SwaggerUIBundle({
+        url: "openapi.yaml",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "StandaloneLayout",
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+        docExpansion: "list",
+        filter: true,
+        tryItOutEnabled: true,
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        syntaxHighlight: {
+          theme: "monokai"
+        },
+        requestInterceptor: (req) => {
+          // Helpful for debugging — log requests to console
+          console.debug("[DocMind API] Request:", req.method, req.url);
+          return req;
+        }
+      });
+      window.ui = ui;
+    };
+  </script>
+</body>
+</html>
