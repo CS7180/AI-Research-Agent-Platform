@@ -21,6 +21,13 @@ class DocumentResponse(BaseModel):
     id: str
     user_id: str
     filename: str
+    file_size_bytes: int
+    mime_type: str
+    folder_path: str = "/"
+    file_hash: str | None = None
+    is_starred: bool = False
+    auto_tags: list[str] = []
+    summary: str | None = None
     status: DocumentStatus
     created_at: datetime
     updated_at: datetime

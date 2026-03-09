@@ -86,7 +86,7 @@ components:
 
     DocumentResponse:
       type: object
-      required: [id, user_id, filename, status, created_at, updated_at]
+      required: [id, user_id, filename, file_size_bytes, mime_type, status, created_at, updated_at]
       properties:
         id:
           type: string
@@ -102,6 +102,40 @@ components:
           type: string
           description: Original filename as uploaded.
           example: "lecture-notes-week3.pdf"
+        file_size_bytes:
+          type: integer
+          description: Size of the file in bytes.
+          example: 2048576
+        mime_type:
+          type: string
+          description: Detected MIME type of the file.
+          example: "application/pdf"
+        folder_path:
+          type: string
+          description: Virtual path for frontend file browser UI.
+          default: "/"
+          example: "/CS7180/Week3"
+        file_hash:
+          type: string
+          nullable: true
+          description: SHA256 checksum for duplicate detection.
+          example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        is_starred:
+          type: boolean
+          description: Whether the user has starred this document.
+          default: false
+        auto_tags:
+          type: array
+          items:
+            type: string
+          description: AI-generated categorization tags added during processing.
+          default: []
+          example: ["Distributed Systems", "Consensus", "2PC"]
+        summary:
+          type: string
+          nullable: true
+          description: AI-generated one-line summary for card views.
+          example: "Slide deck explaining the Two-Phase Commit protocol and node failure edge cases."
         status:
           $ref: "#/components/schemas/DocumentStatus"
         created_at:
@@ -334,6 +368,13 @@ paths:
                 id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
                 user_id: "auth-uid-abc123"
                 filename: "lecture-notes-week3.pdf"
+                file_size_bytes: 2048576
+                mime_type: "application/pdf"
+                folder_path: "/"
+                file_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                is_starred: false
+                auto_tags: []
+                summary: null
                 status: "PENDING"
                 created_at: "2026-03-09T12:00:00Z"
                 updated_at: "2026-03-09T12:00:00Z"
@@ -385,6 +426,13 @@ paths:
                   - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
                     user_id: "auth-uid-abc123"
                     filename: "lecture-notes-week3.pdf"
+                    file_size_bytes: 2048576
+                    mime_type: "application/pdf"
+                    folder_path: "/CS7180/Week3"
+                    file_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    is_starred: true
+                    auto_tags: ["Distributed Systems", "Consensus", "2PC"]
+                    summary: "Slide deck explaining the Two-Phase Commit protocol and node failure edge cases."
                     status: "READY"
                     created_at: "2026-03-09T12:00:00Z"
                     updated_at: "2026-03-09T12:00:45Z"
@@ -392,6 +440,13 @@ paths:
                   - id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
                     user_id: "auth-uid-abc123"
                     filename: "research-paper.pdf"
+                    file_size_bytes: 512000
+                    mime_type: "application/pdf"
+                    folder_path: "/"
+                    file_hash: "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234"
+                    is_starred: false
+                    auto_tags: []
+                    summary: null
                     status: "PROCESSING"
                     created_at: "2026-03-09T13:00:00Z"
                     updated_at: "2026-03-09T13:00:05Z"
