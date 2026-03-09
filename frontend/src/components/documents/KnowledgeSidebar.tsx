@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useMemo } from 'react';
 import FolderSection from '@/components/documents/FolderSection';
 import UploadDropzone from '@/components/documents/UploadDropzone';
 import { MOCK_DOCUMENTS } from '@/lib/mock-documents';
@@ -16,7 +19,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1_000).toFixed(0)} KB`;
 }
 
-/** Group flat document list into folder sections. */
+/** Group flat document list into folder sections, hiding empty folders. */
 function groupByFolder(documents: Document[]) {
   const groups = new Map<string, Document[]>();
   for (const doc of documents) {
@@ -37,9 +40,26 @@ function groupByFolder(documents: Document[]) {
   }));
 }
 
-const FOLDERS = groupByFolder(MOCK_DOCUMENTS.documents);
+const ALL_FOLDERS = groupByFolder(MOCK_DOCUMENTS.documents);
 
 export default function KnowledgeSidebar() {
+  const [query, setQuery] = useState('');
+
+  const filteredFolders = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return ALL_FOLDERS;
+
+    return ALL_FOLDERS
+      .map((folder) => ({
+        ...folder,
+        files: folder.files.filter((f) => f.name.toLowerCase().includes(trimmed)),
+      }))
+      .filter((folder) => folder.files.length > 0)
+      .map((folder) => ({ ...folder, fileCount: folder.files.length }));
+  }, [query]);
+
+  const totalShown = filteredFolders.reduce((sum, f) => sum + f.files.length, 0);
+
   return (
     <aside
       className="flex h-full w-full flex-col rounded-xl border border-border bg-surface"
@@ -49,7 +69,7 @@ export default function KnowledgeSidebar() {
       <div className="p-4 pb-2">
         <h2 className="text-base font-semibold text-foreground">Knowledge Base</h2>
         <p className="text-xs text-muted-light">
-          {MOCK_DOCUMENTS.total} files in {FOLDERS.length} folders
+          {MOCK_DOCUMENTS.total} files in {ALL_FOLDERS.length} folders
         </p>
       </div>
 
@@ -58,17 +78,24 @@ export default function KnowledgeSidebar() {
         <input
           type="search"
           placeholder="Search files and folders"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-light outline-none focus:border-primary"
           aria-label="Search knowledge base"
-          readOnly
         />
       </div>
 
       {/* Folders */}
       <div className="flex-1 overflow-y-auto px-2">
-        {FOLDERS.map((folder) => (
-          <FolderSection key={folder.name} {...folder} />
-        ))}
+        {filteredFolders.length > 0 ? (
+          filteredFolders.map((folder) => (
+            <FolderSection key={folder.name} {...folder} />
+          ))
+        ) : (
+          <p className="px-2 py-6 text-center text-xs text-muted-light">
+            No files matching &ldquo;{query}&rdquo;
+          </p>
+        )}
       </div>
 
       {/* Upload */}
