@@ -4,7 +4,6 @@ interface FileData {
   name: string;
   type: 'pdf' | 'md' | 'txt';
   size: string;
-  detail: string;
   status: 'ready' | 'processing' | 'pending' | 'failed';
 }
 

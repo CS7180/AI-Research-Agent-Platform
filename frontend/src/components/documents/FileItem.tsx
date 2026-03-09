@@ -4,7 +4,6 @@ interface FileItemProps {
   name: string;
   type: 'pdf' | 'md' | 'txt';
   size: string;
-  detail: string;
   status: 'ready' | 'processing' | 'pending' | 'failed';
 }
 
@@ -14,7 +13,7 @@ const TYPE_COLORS: Record<FileItemProps['type'], string> = {
   txt: 'bg-muted-light text-white',
 };
 
-export default function FileItem({ name, type, size, detail, status }: FileItemProps) {
+export default function FileItem({ name, type, size, status }: FileItemProps) {
   return (
     <li className="flex items-center justify-between py-1.5">
       <div className="flex items-center gap-2 overflow-hidden">
@@ -25,9 +24,7 @@ export default function FileItem({ name, type, size, detail, status }: FileItemP
         </span>
         <div className="min-w-0">
           <p className="truncate text-xs font-medium text-foreground">{name}</p>
-          <p className="text-[10px] text-muted-light">
-            {size} · {detail}
-          </p>
+          <p className="text-[10px] text-muted-light">{size}</p>
         </div>
       </div>
       <StatusBadge status={status} />

@@ -1,32 +1,43 @@
 import FolderSection from '@/components/documents/FolderSection';
 import UploadDropzone from '@/components/documents/UploadDropzone';
+import { MOCK_DOCUMENTS } from '@/lib/mock-documents';
+import type { Document } from '@/lib/mock-documents';
 
-const FOLDERS = [
-  {
-    name: 'Distributed Systems',
-    fileCount: 4,
-    files: [
-      { name: 'CS6650_Lecture11_2PC.pdf', type: 'pdf' as const, size: '2.4 MB', detail: '42 chunks', status: 'ready' as const },
-      { name: 'CS6650_Lecture12_3PC.pdf', type: 'pdf' as const, size: '2.1 MB', detail: '38 chunks', status: 'ready' as const },
-      { name: 'Raft_Consensus.pdf', type: 'pdf' as const, size: '1.2 MB', detail: '51 chunks', status: 'ready' as const },
-      { name: 'distributed_systems_note...', type: 'md' as const, size: '89 KB', detail: '24 chunks', status: 'ready' as const },
-    ],
-  },
-  {
-    name: 'AI / Machine Learning',
-    fileCount: 3,
-    files: [
-      { name: 'CS7180_RAG_Survey.pdf', type: 'pdf' as const, size: '3.1 MB', detail: '65 chunks', status: 'ready' as const },
-      { name: 'Attention_Is_All_You_Nee...', type: 'pdf' as const, size: '4.5 MB', detail: '84 chunks', status: 'ready' as const },
-      { name: 'ml_study_notes.txt', type: 'txt' as const, size: '34 KB', detail: '12 chunks', status: 'processing' as const },
-    ],
-  },
-  {
-    name: 'Project Docs',
-    fileCount: 1,
-    files: [],
-  },
-];
+/** Map mime_type to the file type tag used in UI components. */
+function getFileType(mimeType: string): 'pdf' | 'md' | 'txt' {
+  if (mimeType === 'application/pdf') return 'pdf';
+  if (mimeType === 'text/markdown') return 'md';
+  return 'txt';
+}
+
+/** Format bytes to a human-readable string (e.g. "2.4 MB"). */
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
+  return `${(bytes / 1_000).toFixed(0)} KB`;
+}
+
+/** Group flat document list into folder sections. */
+function groupByFolder(documents: Document[]) {
+  const groups = new Map<string, Document[]>();
+  for (const doc of documents) {
+    const folder = doc.folder_path.replace(/^\//, '') || 'Uncategorized';
+    const list = groups.get(folder) ?? [];
+    list.push(doc);
+    groups.set(folder, list);
+  }
+  return Array.from(groups.entries()).map(([name, docs]) => ({
+    name,
+    fileCount: docs.length,
+    files: docs.map((d) => ({
+      name: d.filename,
+      type: getFileType(d.mime_type),
+      size: formatFileSize(d.file_size_bytes),
+      status: d.status.toLowerCase() as 'ready' | 'processing' | 'pending' | 'failed',
+    })),
+  }));
+}
+
+const FOLDERS = groupByFolder(MOCK_DOCUMENTS.documents);
 
 export default function KnowledgeSidebar() {
   return (
@@ -37,7 +48,9 @@ export default function KnowledgeSidebar() {
       {/* Header */}
       <div className="p-4 pb-2">
         <h2 className="text-base font-semibold text-foreground">Knowledge Base</h2>
-        <p className="text-xs text-muted-light">8 files in 3 folders</p>
+        <p className="text-xs text-muted-light">
+          {MOCK_DOCUMENTS.total} files in {FOLDERS.length} folders
+        </p>
       </div>
 
       {/* Search */}
