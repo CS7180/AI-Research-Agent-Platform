@@ -26,7 +26,6 @@ class DocumentResponse(BaseModel):
     folder_path: str = "/"
     file_hash: str | None = None
     is_starred: bool = False
-    auto_tags: list[str] = []
     summary: str | None = None
     status: DocumentStatus
     created_at: datetime
