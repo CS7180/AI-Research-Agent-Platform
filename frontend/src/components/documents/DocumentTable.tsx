@@ -32,13 +32,33 @@ function FolderGroup({
 }) {
   const [isOpen, setIsOpen] = useState(true);
 
+  const [starred, setStarred] = useState(false);
+
   return (
     <>
       <tr
         className="cursor-pointer bg-background transition-colors hover:bg-border-light"
         onClick={() => setIsOpen((p) => !p)}
       >
-        <td colSpan={COL_COUNT} className="px-4 py-2.5">
+        <td className="px-2 py-2.5 text-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setStarred((s) => !s);
+            }}
+            className="text-lg transition-colors hover:scale-110"
+            aria-label={starred ? 'Unstar folder' : 'Star folder'}
+            aria-pressed={starred}
+          >
+            {starred ? (
+              <span className="text-accent-yellow">★</span>
+            ) : (
+              <span className="text-border">☆</span>
+            )}
+          </button>
+        </td>
+        <td colSpan={COL_COUNT - 1} className="px-4 py-2.5">
           <div className="flex items-center gap-2">
             {/* Chevron */}
             <svg
