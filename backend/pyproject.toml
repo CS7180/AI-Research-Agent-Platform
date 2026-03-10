@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 
 dependencies = [
     # Web framework
-    "fastapi>=0.111.0",
+    "fastapi[standard]>=0.111.0",
     "uvicorn[standard]>=0.30.0",
     # Validation
     "pydantic>=2.7.0",
@@ -63,7 +63,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
-ignore = ["E501"]
+ignore = []
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
