@@ -74,7 +74,7 @@ Navigate to the backend directory, sync dependencies, and start the development 
 ```bash
 cd backend
 uv sync --all-extras
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run fastapi dev app/main.py --host 0.0.0.0 --port 8000
 ```
 
 ### 4. Run the Frontend (Next.js)

@@ -189,11 +189,32 @@ AI-Research-Agent-Platform/
   unless complexity demands it.
 
 # 2.3 General
-- Max line length: 88 (Python), 100 (TypeScript)
 - UTF-8 encoding everywhere
 - LF line endings (no CRLF)
 - Trailing newline at end of file
 - No trailing whitespace
+
+# 2.4 Code Size Limits & Best Practices
+This outlines the strict code size and formatting limits agreed upon for the DocMind project. We rely heavily on automated tooling (Linters/Formatters) to enforce these rules.
+
+## Backend (Python / FastAPI)
+- **Formatter / Linter:** `Black` and `Ruff`
+- **Max Line Length:** 88 characters (Enforced by Black and Ruff)
+- **Max Lines per Function:** < 30 lines (Soft rule; break down complex nodes)
+- **Max Lines per File:** < 300 lines (Soft rule; refactor if exceeding 400 lines)
+
+*Key Principle for Backend:* FastAPI route files must be slim (< 200 lines). Delegate business logic to `services` or `agent` directories. If a LangGraph agent file feels bloated, split the individual nodes into separate files.
+
+## Frontend (TypeScript / Next.js)
+- **Formatter:** `Prettier`
+- **Linter:** `ESLint`
+- **Max Line Length:** 100 characters (Enforced by Prettier `printWidth`)
+- **Max Lines per Function:** 80 lines (Enforced by ESLint `max-lines-per-function` - warn)
+- **Max Lines per File:** 250 lines (Enforced by ESLint `max-lines` - warn)
+
+*Key Principle for Frontend:* React components tend to grow fast. If your component file hits the 250-line warning:
+1. Extract repeating UI elements into smaller sub-components.
+2. Extract heavy state logic (`useState`, `useEffect`) into custom hooks.
 
 ## 3. TESTING STRATEGY
 
@@ -496,7 +517,7 @@ Frontend: `cd frontend && npm run dev` (port 3000)
 Supabase: Cloud-hosted (no local Supabase container needed)
 
 Hot reload:
-  - Backend: uvicorn with --reload flag (mounted volume in dev compose)
+  - Backend: fastapi dev (mounted volume in dev compose)
   - Frontend: Next.js dev server with Fast Refresh
   - Celery: watchmedo auto-restart (or manual restart)
 
