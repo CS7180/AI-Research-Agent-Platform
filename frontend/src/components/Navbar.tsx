@@ -1,13 +1,18 @@
+import Link from 'next/link';
 import Avatar from '@/components/ui/Avatar';
 
-export default function Navbar() {
-  const navLinks = [
-    { label: 'Chat', href: '/', isActive: true },
-    { label: 'Documents', href: '/documents', isActive: false },
-    { label: 'Evaluation', href: '/evaluation', isActive: false },
-    { label: 'Settings', href: '/settings', isActive: false },
-  ];
+interface NavbarProps {
+  activePath?: string;
+}
 
+const NAV_LINKS = [
+  { label: 'Chat', href: '/' },
+  { label: 'Documents', href: '/documents' },
+  { label: 'Evaluation', href: '/evaluation' },
+  { label: 'Settings', href: '/settings' },
+];
+
+export default function Navbar({ activePath = '/' }: NavbarProps) {
   return (
     <nav
       className="flex h-12 items-center justify-between bg-navbar px-4 text-white"
@@ -15,29 +20,32 @@ export default function Navbar() {
     >
       {/* Left: logo + nav links */}
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold">
             D
           </div>
           <span className="text-sm font-semibold tracking-tight">DocMind</span>
-        </div>
+        </Link>
 
         <ul className="flex items-center gap-1" role="list">
-          {navLinks.map((link) => (
-            <li key={link.label}>
-              <a
-                href={link.href}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  link.isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/70 hover:text-white'
-                }`}
-                aria-current={link.isActive ? 'page' : undefined}
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const isActive = link.href === activePath;
+            return (
+              <li key={link.label}>
+                <Link
+                  href={link.href}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
