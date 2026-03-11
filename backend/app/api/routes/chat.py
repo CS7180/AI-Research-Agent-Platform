@@ -40,9 +40,7 @@ async def _sse_generator(
         - error:   on failure
         - [DONE]:  end of stream
     """
-    conversation_id = (
-        request.conversation_id or str(uuid.uuid4())
-    )
+    conversation_id = request.conversation_id or str(uuid.uuid4())
 
     try:
         # Build initial agent state
@@ -90,7 +88,9 @@ async def _sse_generator(
 
     except Exception as exc:
         logger.error(
-            "Agent streaming error: %s", exc, exc_info=True,
+            "Agent streaming error: %s",
+            exc,
+            exc_info=True,
         )
         error_event = json.dumps(
             {"type": "error", "content": str(exc)},

@@ -171,7 +171,9 @@ async def toggle_star(
     """Toggle the starred status of a document."""
     supabase.table(DOCUMENTS_TABLE).update(
         {"is_starred": is_starred},
-    ).eq("id", document_id).eq("user_id", user_id).execute()
+    ).eq(
+        "id", document_id
+    ).eq("user_id", user_id).execute()
 
 
 # ── Delete ───────────────────────────────────────────────────────────────────

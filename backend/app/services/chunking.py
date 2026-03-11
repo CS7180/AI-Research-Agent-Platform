@@ -42,14 +42,23 @@ def chunk_text(
     if not text.strip():
         return []
 
-    size = chunk_size or settings.CHUNK_SIZE_TOKENS
-    overlap = chunk_overlap or settings.CHUNK_OVERLAP_TOKENS
+    size = chunk_size if chunk_size is not None else settings.CHUNK_SIZE_TOKENS
+    overlap = (
+        chunk_overlap
+        if chunk_overlap is not None
+        else settings.CHUNK_OVERLAP_TOKENS
+    )
+
+    # Guard: overlap must be less than size to avoid infinite loop
+    if overlap >= size:
+        overlap = 0
 
     tokens = text.split()
     chunks: list[TextChunk] = []
     start = 0
     idx = 0
 
+    step = max(size - overlap, 1)  # Never step by 0 or negative
     while start < len(tokens):
         end = min(start + size, len(tokens))
         chunk_tokens = tokens[start:end]
@@ -62,7 +71,7 @@ def chunk_text(
             ),
         )
         idx += 1
-        start += size - overlap
+        start += step
 
     logger.info(
         "Chunked text into %d chunks (size=%d, overlap=%d)",
