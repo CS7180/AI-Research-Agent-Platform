@@ -44,9 +44,7 @@ def chunk_text(
 
     size = chunk_size if chunk_size is not None else settings.CHUNK_SIZE_TOKENS
     overlap = (
-        chunk_overlap
-        if chunk_overlap is not None
-        else settings.CHUNK_OVERLAP_TOKENS
+        chunk_overlap if chunk_overlap is not None else settings.CHUNK_OVERLAP_TOKENS
     )
 
     # Guard: overlap must be less than size to avoid infinite loop

@@ -80,7 +80,7 @@ async def node_retrieve(state: AgentState) -> dict:
         scores = [c.get("similarity", c.get("rrf_score", 0)) for c in chunks]
         confidence = sum(scores) / len(scores)
 
-    step = f"[Retrieve] Found {len(chunks)} chunks, " f"confidence={confidence:.3f}"
+    step = f"[Retrieve] Found {len(chunks)} chunks, confidence={confidence:.3f}"
     logger.info(step)
     prev_steps = list(state.get("reasoning_steps", []))
     prev_steps.append(step)

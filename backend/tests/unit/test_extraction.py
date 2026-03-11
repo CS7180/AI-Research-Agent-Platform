@@ -6,7 +6,6 @@ import pytest
 
 from app.services.extraction import extract_text
 
-
 # ── PDF extraction ───────────────────────────────────────────────────────────
 
 
@@ -72,7 +71,7 @@ class TestTextExtraction:
         assert "Section" in result
 
     def test_utf8_with_special_chars(self) -> None:
-        content = "日本語テスト 🎉".encode("utf-8")
+        content = "日本語テスト 🎉".encode()
         result = extract_text(content, "text/plain", "unicode.txt")
         assert "日本語" in result
         assert "🎉" in result

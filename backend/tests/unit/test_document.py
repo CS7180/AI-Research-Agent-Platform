@@ -32,12 +32,10 @@ def _mock_supabase(select_data=None, insert_data=None, delete_data=None):
     chain.select.return_value.eq.return_value.eq.return_value.execute.return_value = (
         result
     )
-    chain.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = (
-        result
-    )
-    chain.select.return_value.eq.return_value.order.return_value.execute.return_value = (
-        result
-    )
+    eq_chain = chain.select.return_value.eq.return_value.eq.return_value
+    eq_chain.limit.return_value.execute.return_value = result
+    order_chain = chain.select.return_value.eq.return_value.order
+    order_chain.return_value.execute.return_value = result
 
     # Mock .table().insert().execute()
     insert_result = MagicMock()
@@ -153,7 +151,10 @@ class TestUpdateDocumentStatus:
     async def test_updates_status_with_error(self) -> None:
         mock = _mock_supabase()
         await update_document_status(
-            mock, DOC_ID, "FAILED", error_message="Parse failure",
+            mock,
+            DOC_ID,
+            "FAILED",
+            error_message="Parse failure",
         )
         mock.table.assert_called_with("documents")
 
