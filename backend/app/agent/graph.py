@@ -1,8 +1,22 @@
-"""LangGraph agent workflow graph.
+"""LangGraph Agentic RAG workflow graph.
 
-Defines the conditional agent that selects between KB Retrieval,
-Web Search, and direct generation based on query intent and
-retrieval confidence.
+This is the **core intelligence** of DocMind.  Instead of a fixed
+retrieve → generate pipeline (Naive RAG), the agent makes autonomous
+decisions at each step:
+
+    1. Classify the user's intent (KB query vs. general question).
+    2. Retrieve from the knowledge base.
+    3. **Evaluate** retrieval quality (confidence check).
+    4. Decide whether to supplement with web search.
+    5. Generate a grounded, cited answer.
+
+Graph structure:
+
+    classify_intent
+        ├─ "kb_query"  → retrieve → evaluate_retrieval
+        │                                ├─ high → generate → END
+        │                                └─ low  → web_search → generate → END
+        └─ "general"   → generate → END
 """
 
 from __future__ import annotations
@@ -15,29 +29,52 @@ from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-# Confidence threshold: below this, fall back to web search
 RETRIEVAL_CONFIDENCE_THRESHOLD = 0.5
 
 
-# ── Nodes ────────────────────────────────────────────────────────────────────
+# ── Node: Intent Classification ─────────────────────────────────────────────
+
+
+async def node_classify_intent(state: AgentState) -> dict:
+    """Classify the user's query intent using the LLM.
+
+    Determines whether the query requires knowledge base retrieval
+    or can be answered with general knowledge.
+    """
+    from app.services.llm import classify_intent
+
+    query = state.get("query", "")
+    intent = await classify_intent(query)
+
+    step = f"[Intent] Classified as '{intent}' for: {query[:60]}"
+    logger.info(step)
+    prev_steps = list(state.get("reasoning_steps", []))
+    prev_steps.append(step)
+
+    return {"reasoning_steps": prev_steps, "intent": intent}
+
+
+def route_by_intent(state: AgentState) -> str:
+    """Conditional edge after intent classification."""
+    intent = state.get("intent", "kb_query")
+    if intent == "general":
+        return "generate"
+    return "retrieve"
+
+
+# ── Node: KB Retrieval ───────────────────────────────────────────────────────
 
 
 async def node_retrieve(state: AgentState) -> dict:
-    """KB retrieval node — hybrid BM25 + semantic search.
-
-    Calls the retrieval service and stores results + confidence
-    in the agent state.
-    """
-    from app.api.dependencies import get_supabase_client
+    """Hybrid BM25 + semantic search over the user's knowledge base."""
     from app.services.retrieval import retrieve
 
-    supabase = get_supabase_client()
+    supabase = state.get("supabase")
     query = state.get("query", "")
     user_id = state.get("user_id", "")
 
     chunks = await retrieve(supabase, query, user_id)
 
-    # Compute average similarity as confidence proxy
     confidence = 0.0
     if chunks:
         scores = [
@@ -46,140 +83,167 @@ async def node_retrieve(state: AgentState) -> dict:
         ]
         confidence = sum(scores) / len(scores)
 
-    logger.info(
-        "Retrieval: %d chunks, confidence=%.3f",
-        len(chunks),
-        confidence,
+    step = (
+        f"[Retrieve] Found {len(chunks)} chunks, "
+        f"confidence={confidence:.3f}"
     )
+    logger.info(step)
+    prev_steps = list(state.get("reasoning_steps", []))
+    prev_steps.append(step)
 
     return {
         "retrieved_chunks": chunks,
         "retrieval_confidence": confidence,
+        "reasoning_steps": prev_steps,
     }
 
 
-async def node_web_search(state: AgentState) -> dict:
-    """Web search fallback node.
-
-    Triggered when KB retrieval yields low confidence.
-    Uses a simple web search to supplement context.
-    """
-    query = state.get("query", "")
-    logger.info("Web search fallback for: %s", query[:80])
-
-    # TODO(#8): Integrate real web search API (Tavily, SerpAPI)
-    # For now, return empty results with a note
-    return {
-        "web_search_results": [
-            {
-                "title": "Web search placeholder",
-                "content": (
-                    "Web search is not yet integrated. "
-                    "Please upload relevant documents to your "
-                    "knowledge base for better answers."
-                ),
-                "url": "",
-            },
-        ],
-    }
-
-
-async def node_generate(state: AgentState) -> dict:
-    """LLM generation node — produces grounded answer.
-
-    Combines KB retrieval results and web search results into
-    context, then calls the LLM for answer generation.
-    """
-    from app.services.llm import generate_answer
-
-    query = state.get("query", "")
-    chunks = state.get("retrieved_chunks", [])
-    web_results = state.get("web_search_results", [])
-    image_base64 = state.get("image_base64")
-
-    # Merge web results into chunks format
-    if web_results:
-        for wr in web_results:
-            chunks.append(
-                {
-                    "document_id": "web",
-                    "chunk_index": 0,
-                    "content": wr.get("content", ""),
-                },
-            )
-
-    answer = await generate_answer(
-        query=query,
-        chunks=chunks,
-        image_base64=image_base64,
-    )
-
-    # Build source list
-    sources: list[dict] = []
-    seen: set[str] = set()
-    for chunk in state.get("retrieved_chunks", []):
-        doc_id = chunk.get("document_id", "")
-        if doc_id and doc_id not in seen and doc_id != "web":
-            seen.add(doc_id)
-            sources.append(
-                {
-                    "document_id": doc_id,
-                    "chunk_index": chunk.get("chunk_index", 0),
-                    "excerpt": chunk.get("content", "")[:150],
-                },
-            )
-
-    return {"answer": answer, "sources": sources}
-
-
-# ── Conditional routing ──────────────────────────────────────────────────────
+# ── Node: Evaluate Retrieval (Agent Decision Point) ─────────────────────────
 
 
 def route_after_retrieval(state: AgentState) -> str:
-    """Decide next step after KB retrieval.
+    """Agent decides: is the retrieved context good enough?
 
     If confidence is above threshold → generate directly.
-    If confidence is low → try web search first.
+    If confidence is low → supplement with web search.
     """
     confidence = state.get("retrieval_confidence", 0.0)
     chunks = state.get("retrieved_chunks", [])
 
     if not chunks or confidence < RETRIEVAL_CONFIDENCE_THRESHOLD:
         logger.info(
-            "Low retrieval confidence (%.3f) → web search",
+            "Agent decision: low confidence (%.3f) → web search",
             confidence,
         )
         return "web_search"
+    logger.info(
+        "Agent decision: sufficient confidence (%.3f) → generate",
+        confidence,
+    )
     return "generate"
 
 
-# ── Build graph ──────────────────────────────────────────────────────────────
+# ── Node: Web Search Fallback ────────────────────────────────────────────────
 
 
-def build_agent_graph() -> StateGraph:
-    """Construct and compile the LangGraph agent workflow.
+async def node_web_search(state: AgentState) -> dict:
+    """Web search tool invoked when KB retrieval is insufficient."""
+    query = state.get("query", "")
+    logger.info("Web search for: %s", query[:80])
 
-    Graph structure:
-        retrieve → [confidence check]
-                     ├─ high → generate → END
-                     └─ low  → web_search → generate → END
+    # TODO(#8): Integrate real web search API (Tavily / SerpAPI)
+    results = [
+        {
+            "title": "Web search",
+            "content": (
+                "Web search is not yet integrated. The agent "
+                "supplemented context with available KB chunks."
+            ),
+            "url": "",
+        },
+    ]
 
-    Returns:
-        Compiled StateGraph ready to invoke or stream.
+    step = f"[WebSearch] Retrieved {len(results)} web results"
+    prev_steps = list(state.get("reasoning_steps", []))
+    prev_steps.append(step)
+
+    return {
+        "web_search_results": results,
+        "reasoning_steps": prev_steps,
+    }
+
+
+# ── Node: Generate Answer ───────────────────────────────────────────────────
+
+
+async def node_generate(state: AgentState) -> dict:
+    """LLM generation — produces a grounded answer with citations.
+
+    Merges KB chunks and web search results into a unified context
+    before calling the LLM.
+    """
+    from app.services.llm import generate_answer
+
+    query = state.get("query", "")
+    chunks = list(state.get("retrieved_chunks", []))
+    web_results = state.get("web_search_results", [])
+    image = state.get("image_base64")
+
+    # Merge web results into the context
+    for wr in web_results:
+        chunks.append({
+            "document_id": "web",
+            "chunk_index": 0,
+            "content": wr.get("content", ""),
+        })
+
+    answer = await generate_answer(
+        query=query, chunks=chunks, image_base64=image,
+    )
+
+    # Build source citations (exclude web-sourced chunks)
+    sources: list[dict] = []
+    seen: set[str] = set()
+    for chunk in state.get("retrieved_chunks", []):
+        doc_id = chunk.get("document_id", "")
+        if doc_id and doc_id not in seen and doc_id != "web":
+            seen.add(doc_id)
+            sources.append({
+                "document_id": doc_id,
+                "chunk_index": chunk.get("chunk_index", 0),
+                "excerpt": chunk.get("content", "")[:150],
+            })
+
+    step = f"[Generate] Produced answer ({len(answer)} chars)"
+    prev_steps = list(state.get("reasoning_steps", []))
+    prev_steps.append(step)
+
+    return {
+        "answer": answer,
+        "sources": sources,
+        "reasoning_steps": prev_steps,
+    }
+
+
+# ── Build the Agentic Graph ─────────────────────────────────────────────────
+
+
+def build_agent_graph():
+    """Construct and compile the LangGraph Agentic RAG workflow.
+
+    Graph:
+        classify_intent
+          ├─ "kb_query"  → retrieve → [confidence?]
+          │                               ├─ high → generate → END
+          │                               └─ low  → web_search → generate → END
+          └─ "general"   → generate → END
     """
     graph = StateGraph(AgentState)
 
+    # Add nodes
+    graph.add_node("classify_intent", node_classify_intent)
     graph.add_node("retrieve", node_retrieve)
     graph.add_node("web_search", node_web_search)
     graph.add_node("generate", node_generate)
 
-    graph.set_entry_point("retrieve")
+    # Entry point
+    graph.set_entry_point("classify_intent")
 
+    # Intent routing
+    graph.add_conditional_edges(
+        "classify_intent",
+        route_by_intent,
+        {"retrieve": "retrieve", "generate": "generate"},
+    )
+
+    # Post-retrieval confidence routing
     graph.add_conditional_edges(
         "retrieve",
         route_after_retrieval,
         {"generate": "generate", "web_search": "web_search"},
     )
+
+    # Fixed edges
     graph.add_edge("web_search", "generate")
     graph.add_edge("generate", END)
 

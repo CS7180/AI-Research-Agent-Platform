@@ -81,7 +81,9 @@ async def upload_document(
 
     # Check for duplicate
     existing = await doc_service.check_duplicate(
-        supabase, user_id, file_hash,
+        supabase,
+        user_id,
+        file_hash,
     )
     if existing:
         raise HTTPException(
@@ -192,7 +194,9 @@ async def delete_document(
 
     # Fetch document to get storage path
     doc = await doc_service.get_document(
-        supabase, document_id, user_id,
+        supabase,
+        document_id,
+        user_id,
     )
     if not doc:
         raise HTTPException(
@@ -205,7 +209,9 @@ async def delete_document(
 
     # Delete DB record (chunks cascade-deleted by FK)
     await doc_service.delete_document(
-        supabase, document_id, user_id,
+        supabase,
+        document_id,
+        user_id,
     )
 
     return DeleteDocumentResponse(id=document_id)

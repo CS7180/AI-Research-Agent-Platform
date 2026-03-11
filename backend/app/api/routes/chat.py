@@ -1,18 +1,26 @@
-"""Chat API route — SSE streaming query endpoint."""
+"""Chat API route — Agentic RAG via LangGraph + SSE streaming.
+
+Instead of a fixed retrieve → generate pipeline, this endpoint
+invokes the LangGraph agent which autonomously decides:
+  1. Whether to query the KB.
+  2. Whether retrieval quality is sufficient.
+  3. Whether to fall back to web search.
+  4. How to generate the final grounded answer.
+"""
 
 from __future__ import annotations
 
 import json
 import logging
+import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from app.agent.graph import agent_graph
 from app.api.dependencies import CurrentUser, SupabaseClient
 from app.schemas.chat import ChatRequest
-from app.services import llm as llm_service
-from app.services import retrieval as retrieval_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -23,58 +31,67 @@ async def _sse_generator(
     user_id: str,
     supabase,
 ) -> AsyncIterator[str]:
-    """Generate Server-Sent Events for a chat query.
+    """Stream agent execution as Server-Sent Events.
 
     Event types:
-        - token: incremental text chunk
+        - step:    agent reasoning step (intent, retrieval, etc.)
+        - token:   incremental answer text
         - sources: citation metadata
-        - error: on failure
-        - [DONE]: end of stream
+        - error:   on failure
+        - [DONE]:  end of stream
     """
+    conversation_id = (
+        request.conversation_id or str(uuid.uuid4())
+    )
 
     try:
-        # 1. Retrieve relevant chunks
-        chunks = await retrieval_service.retrieve(
-            supabase, request.message, user_id,
-        )
+        # Build initial agent state
+        initial_state = {
+            "conversation_id": conversation_id,
+            "user_id": user_id,
+            "query": request.message,
+            "image_base64": request.image_base64,
+            "supabase": supabase,
+            "retrieved_chunks": [],
+            "web_search_results": [],
+            "reasoning_steps": [],
+            "sources": [],
+            "answer": "",
+        }
 
-        # 2. Build source citations
-        sources = []
-        seen_docs: set[str] = set()
-        for chunk in chunks:
-            doc_id = chunk.get("document_id", "")
-            if doc_id and doc_id not in seen_docs:
-                seen_docs.add(doc_id)
-                sources.append({
-                    "document_id": doc_id,
-                    "chunk_index": chunk.get("chunk_index", 0),
-                    "excerpt": (
-                        chunk.get("content", "")[:150] + "..."
-                    ),
-                })
+        # Invoke the LangGraph agent
+        final_state = await agent_graph.ainvoke(initial_state)
 
-        # 3. Stream LLM answer tokens
-        async for token in llm_service.stream_answer(
-            query=request.message,
-            chunks=chunks,
-            image_base64=request.image_base64,
-        ):
+        # 1. Stream reasoning steps (agent transparency)
+        for step in final_state.get("reasoning_steps", []):
+            event = json.dumps({"type": "step", "content": step})
+            yield f"data: {event}\n\n"
+
+        # 2. Stream the answer token by token
+        answer = final_state.get("answer", "")
+        # Chunk the answer into ~20-char segments for smooth streaming
+        chunk_size = 20
+        for i in range(0, len(answer), chunk_size):
+            token = answer[i : i + chunk_size]
             event = json.dumps(
                 {"type": "token", "content": token},
             )
             yield f"data: {event}\n\n"
 
-        # 4. Send source citations
+        # 3. Send source citations
+        sources = final_state.get("sources", [])
         sources_event = json.dumps(
             {"type": "sources", "sources": sources},
         )
         yield f"data: {sources_event}\n\n"
 
-        # 5. Done
+        # 4. Done
         yield "data: [DONE]\n\n"
 
     except Exception as exc:
-        logger.error("Chat streaming error: %s", exc, exc_info=True)
+        logger.error(
+            "Agent streaming error: %s", exc, exc_info=True,
+        )
         error_event = json.dumps(
             {"type": "error", "content": str(exc)},
         )
@@ -84,20 +101,20 @@ async def _sse_generator(
 
 @router.post(
     "",
-    summary="Send a chat query and receive a streamed response",
-    response_description="Server-Sent Events stream of the agent's answer",
+    summary="Send a chat query — powered by LangGraph Agentic RAG",
+    response_description="SSE stream with agent reasoning + answer",
 )
 async def chat(
     request: ChatRequest,
     current_user: CurrentUser,
     supabase: SupabaseClient,
 ) -> StreamingResponse:
-    """Accept a text (+ optional image) query, retrieve context,
-    run the LLM, and stream the response as Server-Sent Events.
+    """Accept a query, run the LangGraph agent, and stream the
+    response as Server-Sent Events with full reasoning trace.
     """
     user_id = current_user["id"]
     logger.info(
-        "Chat request: user=%s message=%s",
+        "Agentic RAG request: user=%s message=%s",
         user_id,
         request.message[:80],
     )

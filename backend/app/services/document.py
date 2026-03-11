@@ -49,9 +49,7 @@ async def create_document(
         "storage_path": storage_path,
         "status": "PENDING",
     }
-    result = (
-        supabase.table(DOCUMENTS_TABLE).insert(row).execute()
-    )
+    result = supabase.table(DOCUMENTS_TABLE).insert(row).execute()
     logger.info("Document created: id=%s", document_id)
     return result.data[0]
 
@@ -143,7 +141,8 @@ async def update_document_status(
     if error_message is not None:
         update["error_message"] = error_message
     supabase.table(DOCUMENTS_TABLE).update(update).eq(
-        "id", document_id,
+        "id",
+        document_id,
     ).execute()
     logger.info(
         "Document status updated: id=%s → %s",

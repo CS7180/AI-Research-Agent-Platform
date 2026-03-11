@@ -87,10 +87,7 @@ async def generate_answer(
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(
-            content=(
-                f"## Context\n{context}\n\n"
-                f"## Question\n{query}"
-            ),
+            content=(f"## Context\n{context}\n\n## Question\n{query}"),
         ),
     ]
     response = await model.ainvoke(messages)
@@ -112,12 +109,46 @@ async def stream_answer(
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(
-            content=(
-                f"## Context\n{context}\n\n"
-                f"## Question\n{query}"
-            ),
+            content=(f"## Context\n{context}\n\n## Question\n{query}"),
         ),
     ]
     async for chunk in model.astream(messages):
         if chunk.content:
             yield chunk.content
+
+
+# ── Intent Classification ────────────────────────────────────────────────────
+
+INTENT_PROMPT = """Classify this user query into one of two categories:
+- "kb_query": The user is asking about specific documents, papers,
+  lecture notes, or topics they have uploaded to their knowledge base.
+- "general": The user is asking a general programming/CS question,
+  greeting, or something that does NOT require searching their
+  uploaded documents.
+
+Respond with ONLY the category name, nothing else.
+
+Query: {query}"""
+
+
+async def classify_intent(query: str) -> str:
+    """Classify the user's query intent.
+
+    Returns:
+        "kb_query" or "general".
+    """
+    model = _get_chat_model()
+    messages = [
+        HumanMessage(content=INTENT_PROMPT.format(query=query)),
+    ]
+    response = await model.ainvoke(messages)
+    intent = response.content.strip().lower()
+
+    if intent in ("kb_query", "general"):
+        return intent
+    # Default to kb_query for safety (will attempt retrieval)
+    logger.warning(
+        "Unexpected intent classification '%s', defaulting to kb_query",
+        intent,
+    )
+    return "kb_query"

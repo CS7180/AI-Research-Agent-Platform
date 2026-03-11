@@ -98,12 +98,11 @@ def _rrf_merge(
         items[chunk_id] = item
 
     sorted_ids = sorted(
-        scores, key=lambda cid: scores[cid], reverse=True,
+        scores,
+        key=lambda cid: scores[cid],
+        reverse=True,
     )
-    return [
-        {**items[cid], "rrf_score": scores[cid]}
-        for cid in sorted_ids
-    ]
+    return [{**items[cid], "rrf_score": scores[cid]} for cid in sorted_ids]
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -133,10 +132,17 @@ async def retrieve(
 
     # Run both searches in parallel
     semantic = await _semantic_search(
-        supabase, query_embedding, user_id, k, 0.5,
+        supabase,
+        query_embedding,
+        user_id,
+        k,
+        0.5,
     )
     keywords = await _keyword_search(
-        supabase, query, user_id, k,
+        supabase,
+        query,
+        user_id,
+        k,
     )
 
     logger.info(

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import jwt
 import pytest
@@ -316,7 +316,9 @@ class TestHttpLayer:
     def test_authenticated_request_returns_200(self) -> None:
         user = {"id": USER_UUID, "email": USER_EMAIL}
         client = self._client_with_overrides(user=user)
-        resp = client.get("/protected", headers={"Authorization": f"Bearer {_make_token()}"})
+        resp = client.get(
+            "/protected", headers={"Authorization": f"Bearer {_make_token()}"}
+        )
         assert resp.status_code == 200
         assert resp.json()["user_id"] == USER_UUID
 
@@ -339,7 +341,9 @@ class TestHttpLayer:
         mini_app.dependency_overrides[get_supabase_client] = lambda: supabase
 
         client = TestClient(mini_app, raise_server_exceptions=False)
-        resp = client.get("/protected", headers={"Authorization": "Bearer bad.token.value"})
+        resp = client.get(
+            "/protected", headers={"Authorization": "Bearer bad.token.value"}
+        )
         assert resp.status_code == 401
 
     def test_expired_token_returns_401(self) -> None:
