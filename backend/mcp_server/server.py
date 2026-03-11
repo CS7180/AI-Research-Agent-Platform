@@ -79,10 +79,12 @@ async def call_tool(
         return await _handle_search(arguments)
     if name == "list_documents":
         return await _handle_list_documents()
-    return [TextContent(
-        type="text",
-        text=f"Unknown tool: {name}",
-    )]
+    return [
+        TextContent(
+            type="text",
+            text=f"Unknown tool: {name}",
+        )
+    ]
 
 
 async def _handle_search(
@@ -97,34 +99,37 @@ async def _handle_search(
     user_id = os.environ.get("MCP_USER_ID", "")
 
     if not user_id:
-        return [TextContent(
-            type="text",
-            text="Error: MCP_USER_ID env var not set.",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="Error: MCP_USER_ID env var not set.",
+            )
+        ]
 
     supabase = get_supabase_client()
     chunks = await retrieve(supabase, query, user_id, top_k=top_k)
 
     if not chunks:
-        return [TextContent(
-            type="text",
-            text=f"No results found for: '{query}'",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=f"No results found for: '{query}'",
+            )
+        ]
 
     parts: list[str] = []
     for i, chunk in enumerate(chunks, 1):
         doc_id = chunk.get("document_id", "unknown")
         content = chunk.get("content", "")[:500]
         score = chunk.get("rrf_score", chunk.get("similarity", 0))
-        parts.append(
-            f"**[Result {i}]** (doc: {doc_id}, "
-            f"score: {score:.3f})\n{content}"
-        )
+        parts.append(f"**[Result {i}]** (doc: {doc_id}, score: {score:.3f})\n{content}")
 
-    return [TextContent(
-        type="text",
-        text="\n\n---\n\n".join(parts),
-    )]
+    return [
+        TextContent(
+            type="text",
+            text="\n\n---\n\n".join(parts),
+        )
+    ]
 
 
 async def _handle_list_documents() -> list[TextContent]:
@@ -134,19 +139,23 @@ async def _handle_list_documents() -> list[TextContent]:
 
     user_id = os.environ.get("MCP_USER_ID", "")
     if not user_id:
-        return [TextContent(
-            type="text",
-            text="Error: MCP_USER_ID env var not set.",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="Error: MCP_USER_ID env var not set.",
+            )
+        ]
 
     supabase = get_supabase_client()
     docs = await list_documents(supabase, user_id)
 
     if not docs:
-        return [TextContent(
-            type="text",
-            text="No documents in knowledge base.",
-        )]
+        return [
+            TextContent(
+                type="text",
+                text="No documents in knowledge base.",
+            )
+        ]
 
     lines = [
         f"- **{d['filename']}** | "
@@ -155,10 +164,12 @@ async def _handle_list_documents() -> list[TextContent]:
         f"{d.get('file_size_bytes', 0) / 1024:.1f} KB"
         for d in docs
     ]
-    return [TextContent(
-        type="text",
-        text="## Documents\n" + "\n".join(lines),
-    )]
+    return [
+        TextContent(
+            type="text",
+            text="## Documents\n" + "\n".join(lines),
+        )
+    ]
 
 
 # ── Entry Point ──────────────────────────────────────────────────────────────
