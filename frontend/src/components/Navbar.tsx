@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 import Avatar from '@/components/ui/Avatar';
 
 interface NavbarProps {
@@ -12,7 +13,32 @@ const NAV_LINKS = [
   { label: 'Settings', href: '/settings' },
 ];
 
-export default function Navbar({ activePath = '/' }: NavbarProps) {
+/**
+ * Top navigation bar (Server Component).
+ *
+ * Fetches the authenticated user on the server to display their
+ * initials in the avatar. Falls back to a generic "?" avatar when
+ * the user is not authenticated.
+ */
+export default async function Navbar({ activePath = '/' }: NavbarProps) {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Derive initials from user metadata or email
+  let initials = '?';
+  if (user) {
+    const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? '';
+    initials = name
+      .split(' ')
+      .map((part: string) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    if (!initials) initials = '?';
+  }
+
   return (
     <nav
       className="flex h-12 items-center justify-between bg-navbar px-4 text-white"
@@ -35,9 +61,7 @@ export default function Navbar({ activePath = '/' }: NavbarProps) {
                 <Link
                   href={link.href}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-white/70 hover:text-white'
+                    isActive ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
@@ -58,7 +82,7 @@ export default function Navbar({ activePath = '/' }: NavbarProps) {
         <span className="rounded-md bg-white/10 px-2 py-1 font-mono text-[11px] text-white/80">
           gemini-2.5-flash
         </span>
-        <Avatar initials="JD" color="#6366f1" size="sm" />
+        <Avatar initials={initials} color="#6366f1" size="sm" />
       </div>
     </nav>
   );

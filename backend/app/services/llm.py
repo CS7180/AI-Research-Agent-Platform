@@ -67,12 +67,44 @@ def _build_context_block(chunks: list[dict]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+def _build_user_content(
+    query: str,
+    context: str,
+    image_base64: str | None = None,
+) -> str | list[dict]:
+    """Build the user message content.
+
+    If an image is provided, returns a multi-part list for
+    multi-modal models (Gemini Vision). Otherwise returns
+    a plain text string.
+    """
+    text_part = f"## Context\n{context}\n\n## Question\n{query}"
+
+    if not image_base64:
+        return text_part
+
+    # Multi-modal: include image data inline
+    return [
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{image_base64}",
+            },
+        },
+        {"type": "text", "text": text_part},
+    ]
+
+
 async def generate_answer(
     query: str,
     chunks: list[dict],
     image_base64: str | None = None,
 ) -> str:
     """Generate a grounded answer (non-streaming).
+
+    Supports multi-modal queries: if *image_base64* is provided,
+    the image is included in the prompt for vision models
+    (e.g., Gemini 2.5 Flash).
 
     Args:
         query: User's question.
@@ -84,11 +116,13 @@ async def generate_answer(
     """
     model = _get_chat_model()
     context = _build_context_block(chunks)
+
+    # Build the user message content
+    user_content = _build_user_content(query, context, image_base64)
+
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(
-            content=(f"## Context\n{context}\n\n## Question\n{query}"),
-        ),
+        HumanMessage(content=user_content),
     ]
     response = await model.ainvoke(messages)
     return response.content
@@ -101,16 +135,18 @@ async def stream_answer(
 ) -> AsyncIterator[str]:
     """Stream a grounded answer token by token.
 
+    Supports multi-modal queries via image_base64.
+
     Yields:
         Individual text tokens as they are generated.
     """
     model = _get_chat_model()
     context = _build_context_block(chunks)
+    user_content = _build_user_content(query, context, image_base64)
+
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(
-            content=(f"## Context\n{context}\n\n## Question\n{query}"),
-        ),
+        HumanMessage(content=user_content),
     ]
     async for chunk in model.astream(messages):
         if chunk.content:

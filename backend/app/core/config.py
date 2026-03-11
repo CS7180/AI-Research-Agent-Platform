@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     QWEN_API_KEY: str = ""
+    TAVILY_API_KEY: str = ""
 
     # ── Document Processing ───────────────────────────────────────────────────
     MAX_FILE_SIZE_MB: int = 50

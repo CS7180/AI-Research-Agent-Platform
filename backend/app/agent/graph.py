@@ -77,16 +77,10 @@ async def node_retrieve(state: AgentState) -> dict:
 
     confidence = 0.0
     if chunks:
-        scores = [
-            c.get("similarity", c.get("rrf_score", 0))
-            for c in chunks
-        ]
+        scores = [c.get("similarity", c.get("rrf_score", 0)) for c in chunks]
         confidence = sum(scores) / len(scores)
 
-    step = (
-        f"[Retrieve] Found {len(chunks)} chunks, "
-        f"confidence={confidence:.3f}"
-    )
+    step = f"[Retrieve] Found {len(chunks)} chunks, " f"confidence={confidence:.3f}"
     logger.info(step)
     prev_steps = list(state.get("reasoning_steps", []))
     prev_steps.append(step)
@@ -127,21 +121,52 @@ def route_after_retrieval(state: AgentState) -> str:
 
 
 async def node_web_search(state: AgentState) -> dict:
-    """Web search tool invoked when KB retrieval is insufficient."""
+    """Web search tool invoked when KB retrieval is insufficient.
+
+    Uses the Tavily API for academic/technical search.
+    Falls back to a placeholder if the API key is not configured.
+    """
+    from app.core.config import settings
+
     query = state.get("query", "")
     logger.info("Web search for: %s", query[:80])
 
-    # TODO(#8): Integrate real web search API (Tavily / SerpAPI)
-    results = [
-        {
-            "title": "Web search",
-            "content": (
-                "Web search is not yet integrated. The agent "
-                "supplemented context with available KB chunks."
-            ),
-            "url": "",
-        },
-    ]
+    results: list[dict] = []
+
+    if settings.TAVILY_API_KEY:
+        try:
+            from tavily import TavilyClient
+
+            client = TavilyClient(api_key=settings.TAVILY_API_KEY)
+            response = client.search(
+                query=query,
+                search_depth="advanced",
+                max_results=5,
+            )
+            for r in response.get("results", []):
+                results.append(
+                    {
+                        "title": r.get("title", ""),
+                        "content": r.get("content", ""),
+                        "url": r.get("url", ""),
+                    }
+                )
+        except Exception as exc:
+            logger.warning("Tavily search failed: %s", exc)
+    else:
+        logger.info("Tavily API key not set, skip web search")
+
+    if not results:
+        results = [
+            {
+                "title": "Web search",
+                "content": (
+                    "No web search results available. "
+                    "Consider uploading relevant documents."
+                ),
+                "url": "",
+            }
+        ]
 
     step = f"[WebSearch] Retrieved {len(results)} web results"
     prev_steps = list(state.get("reasoning_steps", []))
@@ -171,14 +196,18 @@ async def node_generate(state: AgentState) -> dict:
 
     # Merge web results into the context
     for wr in web_results:
-        chunks.append({
-            "document_id": "web",
-            "chunk_index": 0,
-            "content": wr.get("content", ""),
-        })
+        chunks.append(
+            {
+                "document_id": "web",
+                "chunk_index": 0,
+                "content": wr.get("content", ""),
+            }
+        )
 
     answer = await generate_answer(
-        query=query, chunks=chunks, image_base64=image,
+        query=query,
+        chunks=chunks,
+        image_base64=image,
     )
 
     # Build source citations (exclude web-sourced chunks)
@@ -188,11 +217,13 @@ async def node_generate(state: AgentState) -> dict:
         doc_id = chunk.get("document_id", "")
         if doc_id and doc_id not in seen and doc_id != "web":
             seen.add(doc_id)
-            sources.append({
-                "document_id": doc_id,
-                "chunk_index": chunk.get("chunk_index", 0),
-                "excerpt": chunk.get("content", "")[:150],
-            })
+            sources.append(
+                {
+                    "document_id": doc_id,
+                    "chunk_index": chunk.get("chunk_index", 0),
+                    "excerpt": chunk.get("content", "")[:150],
+                }
+            )
 
     step = f"[Generate] Produced answer ({len(answer)} chars)"
     prev_steps = list(state.get("reasoning_steps", []))
