@@ -20,6 +20,7 @@ from typing import Any
 import jwt
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
+
 from supabase import Client
 
 logger = logging.getLogger(__name__)

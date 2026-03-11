@@ -7,10 +7,10 @@ from typing import Annotated
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from supabase import Client, create_client
 
 from app.core.config import settings
 from app.core.security import get_current_user
+from supabase import Client, create_client
 
 bearer_scheme = HTTPBearer()
 

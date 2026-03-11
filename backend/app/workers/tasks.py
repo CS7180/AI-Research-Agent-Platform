@@ -67,7 +67,9 @@ async def _run_pipeline(
 
     # 1. Mark as PROCESSING
     await update_document_status(
-        supabase, document_id, "PROCESSING",
+        supabase,
+        document_id,
+        "PROCESSING",
     )
 
     # 2. Download file
@@ -115,7 +117,9 @@ async def _run_pipeline(
 
     # 8. Mark as READY
     await update_document_status(
-        supabase, document_id, "READY",
+        supabase,
+        document_id,
+        "READY",
     )
     logger.info("Document %s processed successfully", document_id)
 
@@ -176,7 +180,9 @@ def process_document(
 
 
 async def _update_failed(
-    supabase, document_id: str, error: str,
+    supabase,
+    document_id: str,
+    error: str,
 ) -> None:
     """Mark a document as FAILED after max retries."""
     from app.services.document import update_document_status
