@@ -91,11 +91,11 @@ export default function KnowledgeSidebar({ documents }: KnowledgeSidebarProps) {
           filteredFolders.map((folder) => (
             <FolderSection key={folder.name} {...folder} />
           ))
-        ) : (
+        ) : query.trim().length > 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-light">
             No files matching &ldquo;{query}&rdquo;
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* Upload */}
