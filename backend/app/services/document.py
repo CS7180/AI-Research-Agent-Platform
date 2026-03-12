@@ -176,6 +176,36 @@ async def toggle_star(
     ).eq("user_id", user_id).execute()
 
 
+async def update_document_filename(
+    supabase: Client,
+    document_id: str,
+    user_id: str,
+    new_filename: str,
+) -> dict | None:
+    """Rename a document.
+
+    Args:
+        supabase: Supabase client.
+        document_id: UUID of the document.
+        user_id: UUID of the user (for authorization).
+        new_filename: New filename for the document.
+
+    Returns:
+        The updated document row as a dict, or ``None`` if not found.
+    """
+    result = (
+        supabase.table(DOCUMENTS_TABLE)
+        .update({"filename": new_filename})
+        .eq("id", document_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if result.data:
+        logger.info("Document renamed: id=%s → %s", document_id, new_filename)
+        return result.data[0]
+    return None
+
+
 # ── Delete ───────────────────────────────────────────────────────────────────
 
 
@@ -202,6 +232,33 @@ async def delete_document(
     if deleted:
         logger.info("Document deleted: id=%s", document_id)
     return deleted
+
+
+async def delete_all_documents(
+    supabase: Client,
+    user_id: str,
+) -> int:
+    """Delete all documents and associated chunks for a user.
+
+    Chunks are cascade-deleted by the FK constraint.
+
+    Args:
+        supabase: Supabase client.
+        user_id: UUID of the user.
+
+    Returns:
+        Number of documents deleted.
+    """
+    result = (
+        supabase.table(DOCUMENTS_TABLE)
+        .delete()
+        .eq("user_id", user_id)
+        .execute()
+    )
+    deleted_count = len(result.data)
+    if deleted_count > 0:
+        logger.info("Deleted all documents for user: count=%d", deleted_count)
+    return deleted_count
 
 
 # ── Chunks ───────────────────────────────────────────────────────────────────

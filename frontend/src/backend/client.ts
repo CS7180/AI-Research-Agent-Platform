@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getBackendApiBaseUrl } from '@/backend/shared';
+import type { Document } from '@/backend/types';
 
 interface StreamHandlers {
   onToken: (token: string) => void;
@@ -19,6 +20,46 @@ async function getAccessTokenOrThrow(): Promise<string> {
   return session.access_token;
 }
 
+export async function downloadDocumentClient(documentId: string, filename: string): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}/download`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+export async function renameDocumentClient(documentId: string, newFilename: string): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ filename: newFilename }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Rename failed: ${response.status}`);
+  }
+}
+
 export async function deleteDocumentClient(documentId: string): Promise<void> {
   const accessToken = await getAccessTokenOrThrow();
   const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}`, {
@@ -30,6 +71,20 @@ export async function deleteDocumentClient(documentId: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error(`Delete failed: ${response.status}`);
+  }
+}
+
+export async function clearKnowledgeBaseClient(): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/clear`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Clear knowledge base failed: ${response.status}`);
   }
 }
 
@@ -50,6 +105,23 @@ export async function uploadDocumentClient(file: File, folderPath = '/'): Promis
   if (!response.ok) {
     throw new Error(`Upload failed: ${response.status}`);
   }
+}
+
+export async function listDocumentsClient(): Promise<Document[]> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fetch documents failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.documents || [];
 }
 
 export async function streamChatClient(

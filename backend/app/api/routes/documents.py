@@ -18,15 +18,19 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import Response
 
 from app.api.dependencies import CurrentUser, SupabaseClient
 from app.core.config import settings
 from app.core.constants import ALLOWED_MIME_TYPES
 from app.schemas.document import (
+    ClearKnowledgeBaseResponse,
     DeleteDocumentResponse,
     DocumentListResponse,
     DocumentResponse,
     DocumentStatus,
+    RenameDocumentRequest,
+    RenameDocumentResponse,
 )
 from app.services import document as doc_service
 from app.services import storage as storage_service
@@ -177,6 +181,104 @@ async def list_documents(
         documents=documents,
         total=len(documents),
     )
+
+
+@router.delete(
+    "/clear",
+    response_model=ClearKnowledgeBaseResponse,
+    summary="Clear entire knowledge base (all documents and chunks)",
+)
+async def clear_knowledge_base(
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+) -> ClearKnowledgeBaseResponse:
+    """Delete all documents and chunks for the current user.
+
+    This also deletes all associated files from storage.
+    """
+    user_id = current_user["id"]
+
+    # Get all documents for the user first
+    documents = await doc_service.list_documents(supabase, user_id)
+
+    # Delete files from storage
+    for doc in documents:
+        try:
+            await storage_service.delete_file(supabase, doc["storage_path"])
+        except Exception as exc:
+            logger.warning(
+                "Failed to delete file from storage: %s",
+                exc,
+            )
+
+    # Delete all documents from DB (chunks cascade-deleted by FK)
+    deleted_count = await doc_service.delete_all_documents(supabase, user_id)
+
+    return ClearKnowledgeBaseResponse(deleted_count=deleted_count)
+
+
+@router.get(
+    "/{document_id}/download",
+    summary="Download a document file",
+)
+async def download_document(
+    document_id: str,
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+) -> Response:
+    """Download a document file from Storage."""
+    user_id = current_user["id"]
+
+    # Fetch document to get storage path and filename
+    doc = await doc_service.get_document(
+        supabase,
+        document_id,
+        user_id,
+    )
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    # Download file from storage
+    file_bytes = await storage_service.download_file(supabase, doc["storage_path"])
+
+    return Response(
+        content=file_bytes,
+        media_type=doc["mime_type"],
+        headers={"Content-Disposition": f'attachment; filename="{doc["filename"]}"'},
+    )
+
+
+@router.patch(
+    "/{document_id}",
+    response_model=RenameDocumentResponse,
+    summary="Rename a document",
+)
+async def rename_document(
+    document_id: str,
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+    request: RenameDocumentRequest,
+) -> RenameDocumentResponse:
+    """Rename a document."""
+    user_id = current_user["id"]
+
+    # Update filename in DB
+    updated = await doc_service.update_document_filename(
+        supabase,
+        document_id,
+        user_id,
+        request.filename,
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    return RenameDocumentResponse(id=document_id, filename=request.filename)
 
 
 @router.delete(

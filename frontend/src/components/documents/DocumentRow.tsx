@@ -1,13 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ActionMenu from '@/components/documents/ActionMenu';
 import type { Document } from '@/backend/types';
-
-interface DocumentRowProps {
-  doc: Document;
-  onDelete: (id: string) => void;
-}
 
 const MIME_TAGS: Record<string, { label: string; color: string }> = {
   'application/pdf': { label: 'PDF', color: 'bg-accent-red text-white' },
@@ -15,46 +11,17 @@ const MIME_TAGS: Record<string, { label: string; color: string }> = {
   'text/plain': { label: 'TXT', color: 'bg-muted-light text-white' },
 };
 
-function formatBytes(bytes: number): string {
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
-  return `${(bytes / 1_000).toFixed(0)} KB`;
-}
+const formatBytes = (bytes: number) => bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${(bytes / 1_000).toFixed(0)} KB`;
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-export default function DocumentRow({ doc, onDelete }: DocumentRowProps) {
+export default function DocumentRow({ doc, onDelete }: { doc: Document; onDelete: (id: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [starred, setStarred] = useState(doc.is_starred);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [filename, setFilename] = useState(doc.filename);
   const tag = MIME_TAGS[doc.mime_type] ?? { label: '?', color: 'bg-muted text-white' };
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [menuOpen]);
-
-  const actions = [
-    { label: 'Download', icon: '↓' },
-    { label: 'Rename', icon: '✎' },
-    { label: 'Move', icon: '→' },
-    { label: 'Delete', icon: '✕', danger: true },
-  ];
 
   return (
     <tr className="border-b border-border-light transition-colors hover:bg-background">
-      {/* Star */}
       <td className="px-2 py-3 text-center">
         <button
           type="button"
@@ -63,33 +30,22 @@ export default function DocumentRow({ doc, onDelete }: DocumentRowProps) {
           aria-label={starred ? 'Unstar document' : 'Star document'}
           aria-pressed={starred}
         >
-          {starred ? (
-            <span className="text-accent-yellow">★</span>
-          ) : (
-            <span className="text-border">☆</span>
-          )}
+          {starred ? <span className="text-accent-yellow">★</span> : <span className="text-border">☆</span>}
         </button>
       </td>
-      {/* Name */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <span
-            className={`flex h-5 w-6 shrink-0 items-center justify-center rounded text-[8px] font-bold ${tag.color}`}
-          >
+          <span className={`flex h-5 w-6 shrink-0 items-center justify-center rounded text-[8px] font-bold ${tag.color}`}>
             {tag.label}
           </span>
-          <p className="min-w-0 truncate text-xs font-medium text-foreground">{doc.filename}</p>
+          <p className="min-w-0 truncate text-xs font-medium text-foreground">{filename}</p>
         </div>
       </td>
-      {/* Size */}
       <td className="px-4 py-3 text-xs text-muted">{formatBytes(doc.file_size_bytes)}</td>
-      {/* Uploaded */}
       <td className="px-4 py-3 text-xs text-muted">{formatDate(doc.created_at)}</td>
-      {/* Status */}
       <td className="px-4 py-3">
         <StatusBadge status={doc.status.toLowerCase() as 'pending' | 'processing' | 'ready' | 'failed'} />
       </td>
-      {/* Actions */}
       <td className="relative px-4 py-3 text-right">
         <button
           type="button"
@@ -100,30 +56,7 @@ export default function DocumentRow({ doc, onDelete }: DocumentRowProps) {
         >
           ⋯
         </button>
-        {menuOpen && (
-          <div
-            ref={menuRef}
-            className="absolute right-4 top-10 z-10 w-32 rounded-lg border border-border bg-surface py-1 shadow-lg"
-          >
-            {actions.map((a) => (
-              <button
-                key={a.label}
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (a.label === 'Delete') onDelete(doc.id);
-                }}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
-                  a.danger
-                    ? 'text-accent-red hover:bg-accent-red-bg'
-                    : 'text-foreground hover:bg-border-light'
-                }`}
-              >
-                <span>{a.icon}</span> {a.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <ActionMenu isOpen={menuOpen} docId={doc.id} filename={filename} onClose={() => setMenuOpen(false)} onDelete={onDelete} onRename={setFilename} />
       </td>
     </tr>
   );
