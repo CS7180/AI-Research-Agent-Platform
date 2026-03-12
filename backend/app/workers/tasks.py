@@ -8,6 +8,11 @@ import logging
 from celery import Celery
 
 from app.core.config import settings
+from app.services.chunking import chunk_text
+from app.services.document import insert_chunks, update_document_status
+from app.services.embedding import generate_embeddings
+from app.services.extraction import extract_text
+from app.services.storage import download_file
 from supabase import create_client
 
 logger = logging.getLogger(__name__)
@@ -54,15 +59,6 @@ async def _run_pipeline(
         6. Store chunks + embeddings in pgvector
         7. Update status → READY
     """
-    from app.services.chunking import chunk_text
-    from app.services.document import (
-        insert_chunks,
-        update_document_status,
-    )
-    from app.services.embedding import generate_embeddings
-    from app.services.extraction import extract_text
-    from app.services.storage import download_file
-
     supabase = _get_supabase()
 
     # 1. Mark as PROCESSING
@@ -185,8 +181,6 @@ async def _update_failed(
     error: str,
 ) -> None:
     """Mark a document as FAILED after max retries."""
-    from app.services.document import update_document_status
-
     await update_document_status(
         supabase,
         document_id,

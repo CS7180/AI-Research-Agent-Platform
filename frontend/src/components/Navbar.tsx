@@ -9,7 +9,6 @@ interface NavbarProps {
 const NAV_LINKS = [
   { label: 'Chat', href: '/' },
   { label: 'Documents', href: '/documents' },
-  { label: 'Evaluation', href: '/evaluation' },
   { label: 'Settings', href: '/settings' },
 ];
 
