@@ -16,7 +16,6 @@ interface ActionMenuProps {
 const ACTIONS = [
   { label: 'Download', icon: '↓' },
   { label: 'Rename', icon: '✎' },
-  { label: 'Move', icon: '→' },
   { label: 'Delete', icon: '✕', danger: true },
 ];
 

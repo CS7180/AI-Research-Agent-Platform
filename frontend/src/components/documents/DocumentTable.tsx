@@ -1,23 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import FolderGroup from '@/components/documents/FolderGroup';
+import DocumentRow from '@/components/documents/DocumentRow';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { deleteDocumentClient, listDocumentsClient } from '@/backend/client';
 import type { Document } from '@/backend/types';
 
 const HEADERS = ['', 'Name', 'Size', 'Uploaded', 'Status', ''];
-
-const groupByFolder = (documents: Document[]) => {
-  const groups = new Map<string, Document[]>();
-  documents.forEach((doc) => {
-    const folder = doc.folder_path.replace(/^\//, '') || 'Uncategorized';
-    const list = groups.get(folder) ?? [];
-    list.push(doc);
-    groups.set(folder, list);
-  });
-  return Array.from(groups.entries());
-};
 
 export default function DocumentTable({ initialDocuments }: { initialDocuments: Document[] }) {
   const [documents, setDocuments] = useState(initialDocuments);
@@ -52,7 +41,6 @@ export default function DocumentTable({ initialDocuments }: { initialDocuments: 
     }
   };
 
-  const folders = groupByFolder(documents);
   const targetDoc = documents.find((d) => d.id === deleteTarget);
 
   return (
@@ -74,8 +62,8 @@ export default function DocumentTable({ initialDocuments }: { initialDocuments: 
             </tr>
           </thead>
           <tbody>
-            {folders.length > 0 ? (
-              folders.map(([name, docs]) => <FolderGroup key={name} name={name} docs={docs} onDelete={setDeleteTarget} />)
+            {documents.length > 0 ? (
+              documents.map((doc) => <DocumentRow key={doc.id} doc={doc} onDelete={setDeleteTarget} />)
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-xs text-muted">
