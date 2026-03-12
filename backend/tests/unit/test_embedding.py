@@ -50,9 +50,11 @@ class TestGetEmbeddingsModel:
 class TestGenerateEmbeddings:
     @pytest.mark.asyncio
     async def test_returns_embedding_vectors(self) -> None:
+        v1 = [0.1] * 768
+        v2 = [0.2] * 768
         mock_model = MagicMock()
         mock_model.aembed_documents = AsyncMock(
-            return_value=[[0.1, 0.2], [0.3, 0.4]],
+            return_value=[v1, v2],
         )
         with (
             patch(
@@ -66,10 +68,26 @@ class TestGenerateEmbeddings:
             result = await generate_embeddings(["hello", "world"])
 
         assert len(result) == 2
-        assert result[0] == [0.1, 0.2]
+        assert result[0] == v1
         mock_model.aembed_documents.assert_called_once_with(
             ["hello", "world"],
         )
+
+    @pytest.mark.asyncio
+    async def test_raises_when_dimension_mismatch(self) -> None:
+        mock_model = MagicMock()
+        mock_model.aembed_documents = AsyncMock(return_value=[[0.1, 0.2]])
+        with (
+            patch(
+                "app.services.embedding._get_embeddings_model",
+                return_value=mock_model,
+            ),
+            patch("app.services.embedding.settings") as mock_s,
+            pytest.raises(ValueError, match="Embedding dimension mismatch"),
+        ):
+            mock_s.EMBEDDING_PROVIDER = "gemini"
+            mock_s.EMBEDDING_MODEL = "test"
+            await generate_embeddings(["hello"])
 
 
 # ── generate_query_embedding ─────────────────────────────────────────────────
@@ -78,9 +96,10 @@ class TestGenerateEmbeddings:
 class TestGenerateQueryEmbedding:
     @pytest.mark.asyncio
     async def test_returns_single_vector(self) -> None:
+        vec = [0.5] * 768
         mock_model = MagicMock()
         mock_model.aembed_query = AsyncMock(
-            return_value=[0.5, 0.6, 0.7],
+            return_value=vec,
         )
         with patch(
             "app.services.embedding._get_embeddings_model",
@@ -88,5 +107,18 @@ class TestGenerateQueryEmbedding:
         ):
             result = await generate_query_embedding("test query")
 
-        assert result == [0.5, 0.6, 0.7]
+        assert result == vec
         mock_model.aembed_query.assert_called_once_with("test query")
+
+    @pytest.mark.asyncio
+    async def test_raises_when_query_dimension_mismatch(self) -> None:
+        mock_model = MagicMock()
+        mock_model.aembed_query = AsyncMock(return_value=[0.1, 0.2])
+        with (
+            patch(
+                "app.services.embedding._get_embeddings_model",
+                return_value=mock_model,
+            ),
+            pytest.raises(ValueError, match="Query embedding dimension mismatch"),
+        ):
+            await generate_query_embedding("test query")

@@ -1,13 +1,25 @@
-export default function ChatInput() {
+interface ChatInputProps {
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}
+
+export default function ChatInput({ value, disabled = false, onChange, onSubmit }: ChatInputProps) {
   return (
     <div className="border-t border-border-light px-4 pb-3 pt-2">
       <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5">
         <input
           type="text"
           placeholder="Ask a follow-up…"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSubmit();
+          }}
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-light outline-none"
           aria-label="Chat message input"
-          readOnly
+          disabled={disabled}
         />
         {/* Paperclip icon */}
         <button
@@ -32,6 +44,8 @@ export default function ChatInput() {
         {/* Send button */}
         <button
           type="button"
+          onClick={onSubmit}
+          disabled={disabled || !value.trim()}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover"
           aria-label="Send message"
         >

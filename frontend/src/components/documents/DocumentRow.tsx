@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import StatusBadge from '@/components/ui/StatusBadge';
-import type { Document } from '@/lib/mock-documents';
+import type { Document } from '@/backend/types';
 
 interface DocumentRowProps {
   doc: Document;
@@ -87,7 +87,7 @@ export default function DocumentRow({ doc, onDelete }: DocumentRowProps) {
       <td className="px-4 py-3 text-xs text-muted">{formatDate(doc.created_at)}</td>
       {/* Status */}
       <td className="px-4 py-3">
-        <StatusBadge status={doc.status.toLowerCase() as 'ready' | 'processing' | 'pending' | 'failed'} />
+        <StatusBadge status={doc.status.toLowerCase() as 'pending' | 'processing' | 'ready' | 'failed'} />
       </td>
       {/* Actions */}
       <td className="relative px-4 py-3 text-right">

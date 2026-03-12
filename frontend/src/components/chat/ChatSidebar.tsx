@@ -1,13 +1,3 @@
-import ChatItem from '@/components/chat/ChatItem';
-
-const CHATS = [
-  { title: 'What is 2PC?', date: 'Just now', isActive: true },
-  { title: 'Paxos vs Raft comparison', date: 'Yesterday', isActive: false },
-  { title: 'RAG chunking strategies', date: 'Feb 23', isActive: false },
-  { title: 'LangGraph agent design', date: 'Feb 20', isActive: false },
-  { title: 'BM25 hybrid search', date: 'Feb 18', isActive: false },
-];
-
 export default function ChatSidebar() {
   return (
     <aside
@@ -29,13 +19,7 @@ export default function ChatSidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3">
-        <ul className="space-y-0.5" role="list">
-          {CHATS.map((chat) => (
-            <li key={chat.title}>
-              <ChatItem title={chat.title} date={chat.date} isActive={chat.isActive} />
-            </li>
-          ))}
-        </ul>
+        <p className="px-2 py-3 text-xs text-muted-light">No chat history yet.</p>
       </nav>
     </aside>
   );

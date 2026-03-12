@@ -11,6 +11,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import chat, documents, health
 from app.core.config import settings
 
+# Normalize configured origin to avoid mismatch like
+# "http://localhost:3000/" vs browser Origin "http://localhost:3000".
+frontend_origin = str(settings.FRONTEND_ORIGIN).rstrip("/")
+allow_origins = [frontend_origin]
+
+# Dev convenience: accept localhost and 127.0.0.1 interchangeably on :3000.
+if frontend_origin == "http://localhost:3000":
+    allow_origins.append("http://127.0.0.1:3000")
+elif frontend_origin == "http://127.0.0.1:3000":
+    allow_origins.append("http://localhost:3000")
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=settings.LOG_LEVEL,
@@ -30,7 +41,7 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(settings.FRONTEND_ORIGIN)],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

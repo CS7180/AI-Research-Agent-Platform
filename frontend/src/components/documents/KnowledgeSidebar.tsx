@@ -3,8 +3,7 @@
 import { useState, useMemo } from 'react';
 import FolderSection from '@/components/documents/FolderSection';
 import UploadDropzone from '@/components/documents/UploadDropzone';
-import { MOCK_DOCUMENTS } from '@/lib/mock-documents';
-import type { Document } from '@/lib/mock-documents';
+import type { Document } from '@/backend/types';
 
 /** Map mime_type to the file type tag used in UI components. */
 function getFileType(mimeType: string): 'pdf' | 'md' | 'txt' {
@@ -40,25 +39,26 @@ function groupByFolder(documents: Document[]) {
   }));
 }
 
-const ALL_FOLDERS = groupByFolder(MOCK_DOCUMENTS.documents);
+interface KnowledgeSidebarProps {
+  documents: Document[];
+}
 
-export default function KnowledgeSidebar() {
+export default function KnowledgeSidebar({ documents }: KnowledgeSidebarProps) {
   const [query, setQuery] = useState('');
+  const allFolders = useMemo(() => groupByFolder(documents), [documents]);
 
   const filteredFolders = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return ALL_FOLDERS;
+    if (!trimmed) return allFolders;
 
-    return ALL_FOLDERS
+    return allFolders
       .map((folder) => ({
         ...folder,
         files: folder.files.filter((f) => f.name.toLowerCase().includes(trimmed)),
       }))
       .filter((folder) => folder.files.length > 0)
       .map((folder) => ({ ...folder, fileCount: folder.files.length }));
-  }, [query]);
-
-  const totalShown = filteredFolders.reduce((sum, f) => sum + f.files.length, 0);
+  }, [allFolders, query]);
 
   return (
     <aside
@@ -69,7 +69,7 @@ export default function KnowledgeSidebar() {
       <div className="p-4 pb-2">
         <h2 className="text-base font-semibold text-foreground">Knowledge Base</h2>
         <p className="text-xs text-muted-light">
-          {MOCK_DOCUMENTS.total} files in {ALL_FOLDERS.length} folders
+          {documents.length} files in {allFolders.length} folders
         </p>
       </div>
 
