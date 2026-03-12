@@ -52,3 +52,17 @@ class ClearKnowledgeBaseResponse(BaseModel):
 
     deleted_count: int
     message: str = "Knowledge base cleared successfully."
+
+
+class RenameDocumentRequest(BaseModel):
+    """Request to rename a document."""
+
+    filename: str
+
+
+class RenameDocumentResponse(BaseModel):
+    """Response after renaming a document."""
+
+    id: str
+    filename: str
+    message: str = "Document renamed successfully."

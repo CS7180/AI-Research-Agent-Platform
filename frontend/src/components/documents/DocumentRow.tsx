@@ -17,6 +17,7 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { 
 export default function DocumentRow({ doc, onDelete }: { doc: Document; onDelete: (id: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [starred, setStarred] = useState(doc.is_starred);
+  const [filename, setFilename] = useState(doc.filename);
   const tag = MIME_TAGS[doc.mime_type] ?? { label: '?', color: 'bg-muted text-white' };
 
   return (
@@ -37,7 +38,7 @@ export default function DocumentRow({ doc, onDelete }: { doc: Document; onDelete
           <span className={`flex h-5 w-6 shrink-0 items-center justify-center rounded text-[8px] font-bold ${tag.color}`}>
             {tag.label}
           </span>
-          <p className="min-w-0 truncate text-xs font-medium text-foreground">{doc.filename}</p>
+          <p className="min-w-0 truncate text-xs font-medium text-foreground">{filename}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-xs text-muted">{formatBytes(doc.file_size_bytes)}</td>
@@ -55,7 +56,7 @@ export default function DocumentRow({ doc, onDelete }: { doc: Document; onDelete
         >
           ⋯
         </button>
-        <ActionMenu isOpen={menuOpen} docId={doc.id} filename={doc.filename} onClose={() => setMenuOpen(false)} onDelete={onDelete} />
+        <ActionMenu isOpen={menuOpen} docId={doc.id} filename={filename} onClose={() => setMenuOpen(false)} onDelete={onDelete} onRename={setFilename} />
       </td>
     </tr>
   );

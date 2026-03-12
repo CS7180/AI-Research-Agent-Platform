@@ -176,6 +176,36 @@ async def toggle_star(
     ).eq("user_id", user_id).execute()
 
 
+async def update_document_filename(
+    supabase: Client,
+    document_id: str,
+    user_id: str,
+    new_filename: str,
+) -> dict | None:
+    """Rename a document.
+
+    Args:
+        supabase: Supabase client.
+        document_id: UUID of the document.
+        user_id: UUID of the user (for authorization).
+        new_filename: New filename for the document.
+
+    Returns:
+        The updated document row as a dict, or ``None`` if not found.
+    """
+    result = (
+        supabase.table(DOCUMENTS_TABLE)
+        .update({"filename": new_filename})
+        .eq("id", document_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if result.data:
+        logger.info("Document renamed: id=%s → %s", document_id, new_filename)
+        return result.data[0]
+    return None
+
+
 # ── Delete ───────────────────────────────────────────────────────────────────
 
 

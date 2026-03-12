@@ -44,6 +44,22 @@ export async function downloadDocumentClient(documentId: string, filename: strin
   window.URL.revokeObjectURL(url);
 }
 
+export async function renameDocumentClient(documentId: string, newFilename: string): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ filename: newFilename }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Rename failed: ${response.status}`);
+  }
+}
+
 export async function deleteDocumentClient(documentId: string): Promise<void> {
   const accessToken = await getAccessTokenOrThrow();
   const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}`, {

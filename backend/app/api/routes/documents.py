@@ -29,6 +29,8 @@ from app.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
     DocumentStatus,
+    RenameDocumentRequest,
+    RenameDocumentResponse,
 )
 from app.services import document as doc_service
 from app.services import storage as storage_service
@@ -247,6 +249,36 @@ async def download_document(
         media_type=doc["mime_type"],
         headers={"Content-Disposition": f'attachment; filename="{doc["filename"]}"'},
     )
+
+
+@router.patch(
+    "/{document_id}",
+    response_model=RenameDocumentResponse,
+    summary="Rename a document",
+)
+async def rename_document(
+    document_id: str,
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+    request: RenameDocumentRequest,
+) -> RenameDocumentResponse:
+    """Rename a document."""
+    user_id = current_user["id"]
+
+    # Update filename in DB
+    updated = await doc_service.update_document_filename(
+        supabase,
+        document_id,
+        user_id,
+        request.filename,
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    return RenameDocumentResponse(id=document_id, filename=request.filename)
 
 
 @router.delete(
