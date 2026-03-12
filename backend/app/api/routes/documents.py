@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import Response
 
 from app.api.dependencies import CurrentUser, SupabaseClient
 from app.core.config import settings
@@ -212,6 +213,40 @@ async def clear_knowledge_base(
     deleted_count = await doc_service.delete_all_documents(supabase, user_id)
 
     return ClearKnowledgeBaseResponse(deleted_count=deleted_count)
+
+
+@router.get(
+    "/{document_id}/download",
+    summary="Download a document file",
+)
+async def download_document(
+    document_id: str,
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+) -> Response:
+    """Download a document file from Storage."""
+    user_id = current_user["id"]
+
+    # Fetch document to get storage path and filename
+    doc = await doc_service.get_document(
+        supabase,
+        document_id,
+        user_id,
+    )
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    # Download file from storage
+    file_bytes = await storage_service.download_file(supabase, doc["storage_path"])
+
+    return Response(
+        content=file_bytes,
+        media_type=doc["mime_type"],
+        headers={"Content-Disposition": f'attachment; filename="{doc["filename"]}"'},
+    )
 
 
 @router.delete(

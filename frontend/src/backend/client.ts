@@ -20,6 +20,30 @@ async function getAccessTokenOrThrow(): Promise<string> {
   return session.access_token;
 }
 
+export async function downloadDocumentClient(documentId: string, filename: string): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}/download`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
 export async function deleteDocumentClient(documentId: string): Promise<void> {
   const accessToken = await getAccessTokenOrThrow();
   const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/${documentId}`, {
