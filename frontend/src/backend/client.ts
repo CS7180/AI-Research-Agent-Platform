@@ -33,6 +33,20 @@ export async function deleteDocumentClient(documentId: string): Promise<void> {
   }
 }
 
+export async function clearKnowledgeBaseClient(): Promise<void> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents/clear`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Clear knowledge base failed: ${response.status}`);
+  }
+}
+
 export async function uploadDocumentClient(file: File, folderPath = '/'): Promise<void> {
   const accessToken = await getAccessTokenOrThrow();
   const form = new FormData();

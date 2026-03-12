@@ -23,6 +23,7 @@ from app.api.dependencies import CurrentUser, SupabaseClient
 from app.core.config import settings
 from app.core.constants import ALLOWED_MIME_TYPES
 from app.schemas.document import (
+    ClearKnowledgeBaseResponse,
     DeleteDocumentResponse,
     DocumentListResponse,
     DocumentResponse,
@@ -177,6 +178,40 @@ async def list_documents(
         documents=documents,
         total=len(documents),
     )
+
+
+@router.delete(
+    "/clear",
+    response_model=ClearKnowledgeBaseResponse,
+    summary="Clear entire knowledge base (all documents and chunks)",
+)
+async def clear_knowledge_base(
+    current_user: CurrentUser,
+    supabase: SupabaseClient,
+) -> ClearKnowledgeBaseResponse:
+    """Delete all documents and chunks for the current user.
+
+    This also deletes all associated files from storage.
+    """
+    user_id = current_user["id"]
+
+    # Get all documents for the user first
+    documents = await doc_service.list_documents(supabase, user_id)
+
+    # Delete files from storage
+    for doc in documents:
+        try:
+            await storage_service.delete_file(supabase, doc["storage_path"])
+        except Exception as exc:
+            logger.warning(
+                "Failed to delete file from storage: %s",
+                exc,
+            )
+
+    # Delete all documents from DB (chunks cascade-deleted by FK)
+    deleted_count = await doc_service.delete_all_documents(supabase, user_id)
+
+    return ClearKnowledgeBaseResponse(deleted_count=deleted_count)
 
 
 @router.delete(

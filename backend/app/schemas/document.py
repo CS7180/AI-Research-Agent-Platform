@@ -45,3 +45,10 @@ class DeleteDocumentResponse(BaseModel):
 
     id: str
     message: str = "Document deleted successfully."
+
+
+class ClearKnowledgeBaseResponse(BaseModel):
+    """Confirmation of knowledge base clear operation."""
+
+    deleted_count: int
+    message: str = "Knowledge base cleared successfully."

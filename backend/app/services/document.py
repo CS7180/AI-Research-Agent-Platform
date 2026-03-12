@@ -204,6 +204,33 @@ async def delete_document(
     return deleted
 
 
+async def delete_all_documents(
+    supabase: Client,
+    user_id: str,
+) -> int:
+    """Delete all documents and associated chunks for a user.
+
+    Chunks are cascade-deleted by the FK constraint.
+
+    Args:
+        supabase: Supabase client.
+        user_id: UUID of the user.
+
+    Returns:
+        Number of documents deleted.
+    """
+    result = (
+        supabase.table(DOCUMENTS_TABLE)
+        .delete()
+        .eq("user_id", user_id)
+        .execute()
+    )
+    deleted_count = len(result.data)
+    if deleted_count > 0:
+        logger.info("Deleted all documents for user: count=%d", deleted_count)
+    return deleted_count
+
+
 # ── Chunks ───────────────────────────────────────────────────────────────────
 
 
