@@ -26,6 +26,14 @@ import logging
 from langgraph.graph import END, StateGraph
 
 from app.agent.state import AgentState
+from app.core.config import settings
+from app.services.llm import classify_intent, generate_answer
+from app.services.retrieval import retrieve
+
+try:
+    from tavily import TavilyClient
+except Exception:  # pragma: no cover - optional dependency/runtime failures
+    TavilyClient = None
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +49,6 @@ async def node_classify_intent(state: AgentState) -> dict:
     Determines whether the query requires knowledge base retrieval
     or can be answered with general knowledge.
     """
-    from app.services.llm import classify_intent
-
     query = state.get("query", "")
     intent = await classify_intent(query)
 
@@ -67,8 +73,6 @@ def route_by_intent(state: AgentState) -> str:
 
 async def node_retrieve(state: AgentState) -> dict:
     """Hybrid BM25 + semantic search over the user's knowledge base."""
-    from app.services.retrieval import retrieve
-
     supabase = state.get("supabase")
     query = state.get("query", "")
     user_id = state.get("user_id", "")
@@ -126,17 +130,13 @@ async def node_web_search(state: AgentState) -> dict:
     Uses the Tavily API for academic/technical search.
     Falls back to a placeholder if the API key is not configured.
     """
-    from app.core.config import settings
-
     query = state.get("query", "")
     logger.info("Web search for: %s", query[:80])
 
     results: list[dict] = []
 
-    if settings.TAVILY_API_KEY:
+    if settings.TAVILY_API_KEY and TavilyClient is not None:
         try:
-            from tavily import TavilyClient
-
             client = TavilyClient(api_key=settings.TAVILY_API_KEY)
             response = client.search(
                 query=query,
@@ -153,6 +153,8 @@ async def node_web_search(state: AgentState) -> dict:
                 )
         except Exception as exc:
             logger.warning("Tavily search failed: %s", exc)
+    elif settings.TAVILY_API_KEY:
+        logger.warning("Tavily API key set but client is unavailable")
     else:
         logger.info("Tavily API key not set, skip web search")
 
@@ -187,8 +189,6 @@ async def node_generate(state: AgentState) -> dict:
     Merges KB chunks and web search results into a unified context
     before calling the LLM.
     """
-    from app.services.llm import generate_answer
-
     query = state.get("query", "")
     chunks = list(state.get("retrieved_chunks", []))
     web_results = state.get("web_search_results", [])
