@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getBackendApiBaseUrl } from '@/backend/shared';
+import type { Document } from '@/backend/types';
 
 interface StreamHandlers {
   onToken: (token: string) => void;
@@ -64,6 +65,23 @@ export async function uploadDocumentClient(file: File, folderPath = '/'): Promis
   if (!response.ok) {
     throw new Error(`Upload failed: ${response.status}`);
   }
+}
+
+export async function listDocumentsClient(): Promise<Document[]> {
+  const accessToken = await getAccessTokenOrThrow();
+  const response = await fetch(`${getBackendApiBaseUrl()}/api/documents`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fetch documents failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.documents || [];
 }
 
 export async function streamChatClient(
