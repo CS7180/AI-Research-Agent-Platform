@@ -12,6 +12,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
+from app.core.constants import EMBEDDING_DIMENSION
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def _get_embeddings_model() -> Embeddings:
         return GoogleGenerativeAIEmbeddings(
             model=settings.EMBEDDING_MODEL,
             google_api_key=settings.GOOGLE_API_KEY,
+            output_dimensionality=EMBEDDING_DIMENSION,
         )
     if provider == "openai":
         return OpenAIEmbeddings(
@@ -53,6 +55,14 @@ async def generate_embeddings(
         len(texts),
     )
     embeddings = await model.aembed_documents(texts)
+    if embeddings:
+        dims = {len(vec) for vec in embeddings}
+        if dims != {EMBEDDING_DIMENSION}:
+            msg = (
+                f"Embedding dimension mismatch: expected "
+                f"{EMBEDDING_DIMENSION}, got {sorted(dims)}"
+            )
+            raise ValueError(msg)
     logger.info("Embeddings generated: %d vectors", len(embeddings))
     return embeddings
 
@@ -69,4 +79,11 @@ async def generate_query_embedding(
         A single embedding vector.
     """
     model = _get_embeddings_model()
-    return await model.aembed_query(query)
+    embedding = await model.aembed_query(query)
+    if len(embedding) != EMBEDDING_DIMENSION:
+        msg = (
+            f"Query embedding dimension mismatch: expected "
+            f"{EMBEDDING_DIMENSION}, got {len(embedding)}"
+        )
+        raise ValueError(msg)
+    return embedding

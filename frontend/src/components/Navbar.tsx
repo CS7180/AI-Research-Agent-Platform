@@ -4,6 +4,7 @@ import Avatar from '@/components/ui/Avatar';
 
 interface NavbarProps {
   activePath?: string;
+  docsCount?: number;
 }
 
 const NAV_LINKS = [
@@ -19,7 +20,7 @@ const NAV_LINKS = [
  * initials in the avatar. Falls back to a generic "?" avatar when
  * the user is not authenticated.
  */
-export default async function Navbar({ activePath = '/' }: NavbarProps) {
+export default async function Navbar({ activePath = '/', docsCount }: NavbarProps) {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -74,10 +75,12 @@ export default async function Navbar({ activePath = '/' }: NavbarProps) {
 
       {/* Right: doc count, model, avatar */}
       <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px]">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
-          8 docs
-        </span>
+        {typeof docsCount === 'number' && (
+          <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+            {docsCount} docs
+          </span>
+        )}
         <span className="rounded-md bg-white/10 px-2 py-1 font-mono text-[11px] text-white/80">
           gemini-2.5-flash
         </span>

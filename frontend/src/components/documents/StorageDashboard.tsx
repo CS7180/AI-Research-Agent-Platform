@@ -1,4 +1,4 @@
-import { MOCK_DOCUMENTS } from '@/lib/mock-documents';
+import type { Document } from '@/backend/types';
 
 const STORAGE_LIMIT_MB = 500;
 
@@ -8,8 +8,7 @@ const MIME_LABELS: Record<string, { label: string; color: string }> = {
   'text/plain': { label: 'TXT', color: 'bg-muted-light text-white' },
 };
 
-function computeStats() {
-  const docs = MOCK_DOCUMENTS.documents;
+function computeStatsFromDocuments(docs: Document[]) {
   const totalBytes = docs.reduce((sum, d) => sum + d.file_size_bytes, 0);
   const usedMB = totalBytes / 1_000_000;
 
@@ -21,8 +20,12 @@ function computeStats() {
   return { usedMB, counts };
 }
 
-export default function StorageDashboard() {
-  const { usedMB, counts } = computeStats();
+interface StorageDashboardProps {
+  documents: Document[];
+}
+
+export default function StorageDashboard({ documents }: StorageDashboardProps) {
+  const { usedMB, counts } = computeStatsFromDocuments(documents);
   const pct = Math.min((usedMB / STORAGE_LIMIT_MB) * 100, 100);
 
   return (
