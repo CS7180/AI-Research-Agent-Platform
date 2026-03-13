@@ -249,12 +249,7 @@ async def delete_all_documents(
     Returns:
         Number of documents deleted.
     """
-    result = (
-        supabase.table(DOCUMENTS_TABLE)
-        .delete()
-        .eq("user_id", user_id)
-        .execute()
-    )
+    result = supabase.table(DOCUMENTS_TABLE).delete().eq("user_id", user_id).execute()
     deleted_count = len(result.data)
     if deleted_count > 0:
         logger.info("Deleted all documents for user: count=%d", deleted_count)

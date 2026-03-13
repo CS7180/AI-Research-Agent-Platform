@@ -98,13 +98,13 @@ export default function ChatArea() {
   }
 
   return (
-    <section className="flex h-full flex-col rounded-xl border border-border bg-surface">
+    <section className="flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-border bg-surface">
       <header className="border-b border-border-light px-6 py-4">
         <h1 className="text-xl font-bold text-foreground">Research Chat</h1>
         <p className="text-xs text-muted-light">Ask questions grounded in your uploaded documents</p>
       </header>
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
         {messages.length === 0 ? (
           <p className="text-sm text-muted">Ask your first question to start a real backend chat session.</p>
         ) : (

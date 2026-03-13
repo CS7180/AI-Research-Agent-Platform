@@ -1,0 +1,56 @@
+repos:
+  # Use local hooks so we run the exact tool versions from `backend/` via `uv`.
+  # This keeps local checks aligned with `.github/workflows/ci.yml`.
+  - repo: local
+    hooks:
+      # ── Backend (Python) ────────────────────────────────────────────────
+      # Run from `backend/` so Ruff's import sorting correctly treats `app` as
+      # first-party (matching CI, which uses backend as the working directory).
+      - id: backend-ruff
+        name: backend-ruff (lint)
+        entry: uv --project backend --directory backend run ruff check --fix .
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-black
+        name: backend-black (format)
+        entry: uv --project backend --directory backend run black .
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      # ── Pre-push gates (mirrors CI, but runs locally before `git push`) ──
+      - id: backend-black-check
+        name: backend-black (check, pre-push)
+        entry: uv --project backend --directory backend run black --check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
+      - id: backend-ruff-check
+        name: backend-ruff (check, pre-push)
+        entry: uv --project backend --directory backend run ruff check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
+      - id: backend-pytest
+        name: backend-pytest (pre-push)
+        entry: uv --project backend --directory backend run pytest
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
+      - id: frontend-eslint
+        name: frontend-eslint (pre-push)
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
