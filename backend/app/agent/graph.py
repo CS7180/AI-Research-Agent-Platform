@@ -40,6 +40,45 @@ logger = logging.getLogger(__name__)
 RETRIEVAL_CONFIDENCE_THRESHOLD = 0.5
 
 
+def _fallback_filename(document_id: str) -> str:
+    """Provide a stable fallback filename for UI/source cards."""
+    if not document_id:
+        return "Unknown source"
+    return f"Document {document_id[:8]}"
+
+
+def _fetch_filename_map(
+    supabase,
+    user_id: str,
+    document_ids: set[str],
+) -> dict[str, str]:
+    """Resolve document_id -> filename for source citations.
+
+    Retrieval currently returns chunk-level IDs without filenames.
+    To make source cards convincing, enrich citations with filenames.
+    """
+    if not supabase or not user_id or not document_ids:
+        return {}
+
+    mapping: dict[str, str] = {}
+    for doc_id in document_ids:
+        try:
+            result = (
+                supabase.table("documents")
+                .select("id, filename")
+                .eq("id", doc_id)
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                row = result.data[0]
+                mapping[str(row["id"])] = str(row.get("filename") or _fallback_filename(doc_id))
+        except Exception as exc:  # pragma: no cover - defensive runtime guard
+            logger.warning("Failed to fetch filename for doc_id=%s: %s", doc_id, exc)
+    return mapping
+
+
 # ── Node: Intent Classification ─────────────────────────────────────────────
 
 
@@ -193,6 +232,8 @@ async def node_generate(state: AgentState) -> dict:
     chunks = list(state.get("retrieved_chunks", []))
     web_results = state.get("web_search_results", [])
     image = state.get("image_base64")
+    supabase = state.get("supabase")
+    user_id = state.get("user_id", "")
 
     # Merge web results into the context
     for wr in web_results:
@@ -211,6 +252,13 @@ async def node_generate(state: AgentState) -> dict:
     )
 
     # Build source citations (exclude web-sourced chunks)
+    source_doc_ids = {
+        str(chunk.get("document_id", ""))
+        for chunk in state.get("retrieved_chunks", [])
+        if chunk.get("document_id") and chunk.get("document_id") != "web"
+    }
+    filename_map = _fetch_filename_map(supabase, user_id, source_doc_ids)
+
     sources: list[dict] = []
     seen: set[str] = set()
     for chunk in state.get("retrieved_chunks", []):
@@ -220,6 +268,7 @@ async def node_generate(state: AgentState) -> dict:
             sources.append(
                 {
                     "document_id": doc_id,
+                    "filename": filename_map.get(doc_id, _fallback_filename(doc_id)),
                     "chunk_index": chunk.get("chunk_index", 0),
                     "excerpt": chunk.get("content", "")[:150],
                 }

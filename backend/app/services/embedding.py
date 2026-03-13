@@ -12,8 +12,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
-from app.core.constants import EMBEDDING_DIMENSION
 from app.core.config import settings
+from app.core.constants import EMBEDDING_DIMENSION
 
 logger = logging.getLogger(__name__)
 
