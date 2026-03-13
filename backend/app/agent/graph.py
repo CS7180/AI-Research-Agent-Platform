@@ -73,9 +73,15 @@ def _fetch_filename_map(
             )
             if result.data:
                 row = result.data[0]
-                mapping[str(row["id"])] = str(row.get("filename") or _fallback_filename(doc_id))
+                mapping[str(row["id"])] = str(
+                    row.get("filename") or _fallback_filename(doc_id)
+                )
         except Exception as exc:  # pragma: no cover - defensive runtime guard
-            logger.warning("Failed to fetch filename for doc_id=%s: %s", doc_id, exc)
+            logger.warning(
+                "Failed to fetch filename for doc_id=%s: %s",
+                doc_id,
+                exc,
+            )
     return mapping
 
 
