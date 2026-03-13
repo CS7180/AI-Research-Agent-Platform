@@ -20,7 +20,9 @@ export default function ChatMessage({ variant, children }: ChatMessageProps) {
   return (
     <div className="flex items-start gap-2">
       <Avatar initials="D" color="#ef4444" size="sm" />
-      <div className="max-w-2xl text-sm leading-relaxed text-foreground">{children}</div>
+      <div className="max-w-2xl whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+        {children}
+      </div>
     </div>
   );
 }

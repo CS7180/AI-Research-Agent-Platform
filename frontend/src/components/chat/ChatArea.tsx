@@ -26,9 +26,18 @@ function toSourceType(filename: string): 'pdf' | 'md' | 'txt' {
 
 function mapSourcesToCardItems(sources: unknown[]): SourceCardItem[] {
   return sources
-    .filter((source): source is { filename?: unknown; chunk_index?: unknown } => typeof source === 'object' && source !== null)
+    .filter(
+      (
+        source,
+      ): source is { filename?: unknown; document_id?: unknown; chunk_index?: unknown } =>
+        typeof source === 'object' && source !== null,
+    )
     .map((source) => {
-      const name = typeof source.filename === 'string' ? source.filename : 'Unknown source';
+      const name = typeof source.filename === 'string'
+        ? source.filename
+        : typeof source.document_id === 'string'
+          ? `Document ${source.document_id.slice(0, 8)}`
+          : 'Unknown source';
       const chunkIndex = typeof source.chunk_index === 'number' ? source.chunk_index : null;
       return {
         name,
