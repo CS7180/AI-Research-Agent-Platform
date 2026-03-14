@@ -21,7 +21,7 @@ DocMind is a full-stack AI-powered research agent platform designed for CS stude
 - **Evaluation**: RAGAS
 
 ### Frontend
-- **Framework**: Next.js 14+ (App Router)
+- **Framework**: Next.js 16+ (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Streaming**: Server-Sent Events (SSE)
@@ -32,9 +32,10 @@ DocMind is a full-stack AI-powered research agent platform designed for CS stude
 AI-Research-Agent-Platform/
 ├── backend/               # FastAPI application, LangGraph agent, and Celery workers
 ├── frontend/              # Next.js web interface
-├── mcp_server/            # Model Context Protocol server for AI IDE/client integration
+├── backend/mcp_server/     # Model Context Protocol server for AI IDE/client integration
 ├── docker-compose.yml     # Production services orchestration
 ├── docker-compose.dev.yml # Local development orchestration with hot-reloading
+├── docs/api/              # OpenAPI spec + Swagger UI static viewer
 └── .agents/rules.md       # Project conventions and AI-assistant guardrails
 ```
 
@@ -89,6 +90,18 @@ npm run dev
 
 The app will be available at `http://localhost:3000`.
 
+## 📚 API Documentation
+
+- OpenAPI spec: `docs/api/openapi.yaml`
+- Human-friendly Swagger UI: open `docs/api/index.html` (it loads `openapi.yaml`)
+
+## 🤖 Switching LLM Providers / Models
+
+The backend LLM is configured via `backend/.env`:
+
+- `LLM_PROVIDER` / `LLM_MODEL` control the chat model used for answering.
+- `EMBEDDING_PROVIDER` / `EMBEDDING_MODEL` control embeddings (changing this typically requires re-embedding existing documents).
+
 ## 🧪 Evaluation
 
 DocMind uses the RAGAS framework to quantitatively evaluate RAG pipeline quality. A benchmark set of 30 questions with ground-truth answers ensures we meet our target metrics:
@@ -96,6 +109,16 @@ DocMind uses the RAGAS framework to quantitatively evaluate RAG pipeline quality
 - Answer Relevancy ≥ 0.80
 - Context Precision ≥ 0.75
 - Context Recall ≥ 0.70
+
+## ✅ Local Checks (Recommended)
+
+We recommend installing `pre-commit` hooks so formatting/lint failures are caught before CI:
+
+```bash
+pre-commit install
+pre-commit install --hook-type pre-push
+pre-commit run --all-files
+```
 
 ## 📝 License
 

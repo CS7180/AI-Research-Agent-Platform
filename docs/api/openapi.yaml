@@ -175,6 +175,44 @@ components:
           type: string
           example: "Document deleted successfully."
 
+    ClearKnowledgeBaseResponse:
+      type: object
+      required: [deleted_count, message]
+      properties:
+        deleted_count:
+          type: integer
+          description: Number of documents deleted.
+          example: 12
+        message:
+          type: string
+          example: "Knowledge base cleared successfully."
+
+    RenameDocumentRequest:
+      type: object
+      required: [filename]
+      properties:
+        filename:
+          type: string
+          description: New filename for the document.
+          example: "week3-2pc-notes.pdf"
+
+    RenameDocumentResponse:
+      type: object
+      required: [id, filename, message]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the renamed document.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        filename:
+          type: string
+          description: Updated filename.
+          example: "week3-2pc-notes.pdf"
+        message:
+          type: string
+          example: "Document renamed successfully."
+
     # --- Chat ---------------------------------------------------------------
     ChatRequest:
       type: object
@@ -264,15 +302,16 @@ components:
       properties:
         type:
           type: string
-          enum: [token, sources, error]
+          enum: [step, token, sources, error]
           description: |
+            - `step` — agent reasoning step (intent, retrieval, decision, etc.).
             - `token` — incremental text chunk of the answer.
             - `sources` — citation metadata sent after the last token.
             - `error` — an error occurred; streaming stops.
         content:
           type: string
           nullable: true
-          description: Text content for `token` events.
+          description: Text content for `step`, `token`, and `error` events.
           example: "According to your lecture notes,"
         sources:
           type: array
@@ -350,6 +389,10 @@ paths:
                   type: string
                   format: binary
                   description: PDF, Markdown, or TXT file. Maximum 50 MB.
+                folder_path:
+                  type: string
+                  description: Virtual folder path used by the UI. Defaults to `/`.
+                  default: "/"
       responses:
         "202":
           description: Document accepted and queued for processing.
@@ -395,6 +438,14 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: "Unsupported file type: application/zip. Allowed: PDF, Markdown, TXT."
+        "409":
+          description: Duplicate file detected for this user (same SHA-256 content hash).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Duplicate file detected: 'lecture-notes-week3.pdf' (id: 3fa85f64-5717-4562-b3fc-2c963f66afa6) has the same content."
 
   /api/documents:
     get:
@@ -448,7 +499,123 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/documents/clear:
+    delete:
+      operationId: clearKnowledgeBase
+      tags: [documents]
+      summary: Clear entire knowledge base (all documents and chunks)
+      description: |
+        Deletes **all** documents for the authenticated user.
+
+        This performs:
+        - Storage cleanup (raw files in Supabase Storage)
+        - DB cleanup (`documents` rows; `document_chunks` cascade deleted)
+      responses:
+        "200":
+          description: Knowledge base cleared successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearKnowledgeBaseResponse"
+              example:
+                deleted_count: 12
+                message: "Knowledge base cleared successfully."
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/documents/{document_id}/download:
+    get:
+      operationId: downloadDocument
+      tags: [documents]
+      summary: Download a document file
+      description: Downloads the raw file bytes from storage for the given document.
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document to download.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        "200":
+          description: File bytes returned successfully.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: "attachment; filename=\"lecture-notes-week3.pdf\""
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Document not found."
+
   /api/documents/{document_id}:
+    patch:
+      operationId: renameDocument
+      tags: [documents]
+      summary: Rename a document
+      description: Updates the document's filename (metadata only).
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document to rename.
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameDocumentRequest"
+      responses:
+        "200":
+          description: Document renamed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenameDocumentResponse"
+              example:
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                filename: "week3-2pc-notes.pdf"
+                message: "Document renamed successfully."
+        "401":
+          description: Missing or invalid JWT token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Document not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                detail: "Document not found."
     delete:
       operationId: deleteDocument
       tags: [documents]
@@ -485,14 +652,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Document belongs to a different user.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                detail: "Access denied."
         "404":
           description: Document not found.
           content:
@@ -525,6 +684,7 @@ paths:
 
         | Event type | When | Payload |
         |---|---|---|
+        | `step` | When an agent step is recorded | `content: string` |
         | `token` | Every incremental text chunk | `content: string` |
         | `sources` | After last token | `sources: CitationSource[]` |
         | `error` | On agent failure | `content: string` (error message) |
@@ -534,11 +694,10 @@ paths:
         The LangGraph agent autonomously selects one or more tools per query:
         - **KB Retrieval** (hybrid BM25 + semantic, re-ranked) — used when the answer is likely in uploaded documents.
         - **Web Search** — fallback when KB retrieval yields low confidence.
-        - **Code Execution** — used for computational queries.
 
         ## Multi-Modal Input
         Pass `image_base64` alongside `message` to send a whiteboard photo or
-        diagram. Gemini 2.5 Flash processes both inputs together.
+        diagram. The configured multi-modal model processes both inputs together.
       requestBody:
         required: true
         content:
@@ -600,13 +759,3 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 detail: "message: ensure this value has at most 4096 characters"
-        "501":
-          description: >
-            Chat agent not yet implemented (sprint backlog Issues #5, #8).
-            This response will be removed when the LangGraph agent is wired up.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                detail: "Chat agent not yet implemented (Issues #5, #8)."
