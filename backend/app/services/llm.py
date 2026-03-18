@@ -12,7 +12,6 @@ from collections.abc import AsyncIterator
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
 
@@ -44,7 +43,7 @@ Rules:
 
 
 def _get_chat_model() -> BaseChatModel:
-    """Return the configured LLM instance."""
+    """Return the configured Gemini chat model instance."""
     provider = settings.LLM_PROVIDER.lower()
     if provider == "gemini":
         return ChatGoogleGenerativeAI(
@@ -53,14 +52,7 @@ def _get_chat_model() -> BaseChatModel:
             temperature=0.3,
             streaming=True,
         )
-    if provider == "openai":
-        return ChatOpenAI(
-            model=settings.LLM_MODEL,
-            openai_api_key=settings.OPENAI_API_KEY,
-            temperature=0.3,
-            streaming=True,
-        )
-    msg = f"Unsupported LLM provider: {provider}"
+    msg = f"Unsupported LLM provider: {provider!r}. Only 'gemini' is supported."
     raise ValueError(msg)
 
 

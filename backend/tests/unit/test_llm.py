@@ -31,14 +31,6 @@ class TestGetChatModel:
             model = _get_chat_model()
         assert model is not None
 
-    def test_openai_provider(self) -> None:
-        with patch("app.services.llm.settings") as mock_s:
-            mock_s.LLM_PROVIDER = "openai"
-            mock_s.LLM_MODEL = "gpt-4o-mini"
-            mock_s.OPENAI_API_KEY = "test-key"
-            model = _get_chat_model()
-        assert model is not None
-
     def test_unsupported_provider_raises(self) -> None:
         with (
             patch("app.services.llm.settings") as mock_s,

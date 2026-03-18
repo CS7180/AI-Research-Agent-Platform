@@ -27,14 +27,6 @@ class TestGetEmbeddingsModel:
             model = _get_embeddings_model()
         assert model is not None
 
-    def test_openai_provider(self) -> None:
-        with patch("app.services.embedding.settings") as mock_s:
-            mock_s.EMBEDDING_PROVIDER = "openai"
-            mock_s.EMBEDDING_MODEL = "text-embedding-3-small"
-            mock_s.OPENAI_API_KEY = "test-key"
-            model = _get_embeddings_model()
-        assert model is not None
-
     def test_unsupported_provider_raises(self) -> None:
         with (
             patch("app.services.embedding.settings") as mock_s,
