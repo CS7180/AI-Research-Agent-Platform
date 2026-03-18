@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv safely
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install Python dependencies using uv instead of pip
+# Install production dependencies only — dev/eval deps (ragas, pytest, etc.)
+# are excluded to keep the image lean and reduce memory footprint.
 COPY pyproject.toml .
-RUN uv pip install --system -e ".[dev]"
+RUN uv pip install --system -e "."
 
 # Copy application source
 COPY app/ ./app/

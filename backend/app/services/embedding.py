@@ -10,7 +10,6 @@ import logging
 
 from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_openai import OpenAIEmbeddings
 
 from app.core.config import settings
 from app.core.constants import EMBEDDING_DIMENSION
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_embeddings_model() -> Embeddings:
-    """Return the configured embedding model instance."""
+    """Return the configured Gemini embedding model instance."""
     provider = settings.EMBEDDING_PROVIDER.lower()
     if provider == "gemini":
         return GoogleGenerativeAIEmbeddings(
@@ -27,12 +26,7 @@ def _get_embeddings_model() -> Embeddings:
             google_api_key=settings.GOOGLE_API_KEY,
             output_dimensionality=EMBEDDING_DIMENSION,
         )
-    if provider == "openai":
-        return OpenAIEmbeddings(
-            model=settings.EMBEDDING_MODEL,
-            openai_api_key=settings.OPENAI_API_KEY,
-        )
-    msg = f"Unsupported embedding provider: {provider}"
+    msg = f"Unsupported embedding provider: {provider!r}. Only 'gemini' is supported."
     raise ValueError(msg)
 
 
