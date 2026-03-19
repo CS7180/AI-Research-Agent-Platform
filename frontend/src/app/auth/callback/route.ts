@@ -13,9 +13,20 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  // Use NextRequest's nextUrl which respects x-forwarded-host headers
+  // from reverse proxies (e.g. Zeabur). Using `new URL(request.url)`
+  // would return the container-internal origin (localhost:8080).
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const next = url.searchParams.get('next') ?? '/';
+
+  // Build the redirect base from the forwarded host header so it
+  // works behind reverse proxies (Zeabur, Vercel, etc.)
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : url.origin;
 
   if (code) {
     const supabase = await getSupabaseServerClient();
